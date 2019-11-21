@@ -1,0 +1,3 @@
+rootProject.name = 'raft'
+include 'raft-server'
+include 'raft-protocol'

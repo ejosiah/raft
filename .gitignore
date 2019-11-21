@@ -1,0 +1,11 @@
+*.class
+.idea
+target/
+.gradle/
+gradlew.bat
+**/build/
+*.iml
+*.log
+**/.DS_Store
+**/out/
+**/*.sc

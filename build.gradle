@@ -1,0 +1,13 @@
+allprojects {
+    repositories {
+        jcenter()
+        mavenCentral()
+        mavenLocal()
+    }
+}
+
+subprojects {
+    group 'com.josiahebhomenye'
+    version = '1.0-SNAPSHOT'
+    sourceCompatibility = 1.8
+}
