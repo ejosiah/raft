@@ -1,6 +1,7 @@
 package com.josiahebhomenye.raft.comand;
 
 public class Divide extends Command {
+
     public Divide(int value) {
         super(value);
     }

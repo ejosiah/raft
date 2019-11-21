@@ -7,7 +7,7 @@ sourceCompatibility = 1.8
 
 
 dependencies {
-    compile group: 'org.projectlombok', name: 'lombok', version: '1.18.10'
+    providedCompile group: 'org.projectlombok', name: 'lombok', version: '1.18.10'
 
     compile group: 'io.netty', name: 'netty-all', version: '4.1.43.Final'
     compile group: 'io.prometheus', name: 'simpleclient', version: '0.8.0'
