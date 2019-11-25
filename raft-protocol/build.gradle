@@ -5,13 +5,13 @@ plugins {
 
 sourceCompatibility = 1.8
 
-
 dependencies {
-    providedCompile group: 'org.projectlombok', name: 'lombok', version: '1.18.10'
+    compile group: 'org.projectlombok', name: 'lombok', version: '1.18.10'
 
     compile group: 'io.netty', name: 'netty-all', version: '4.1.43.Final'
     compile group: 'io.prometheus', name: 'simpleclient', version: '0.8.0'
     compile group: 'com.typesafe', name: 'config', version: '1.4.0'
+    compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.9.8'
 
 
     compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.29'

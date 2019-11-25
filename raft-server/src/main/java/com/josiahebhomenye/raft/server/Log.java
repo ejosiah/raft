@@ -5,7 +5,8 @@ import lombok.SneakyThrows;
 import java.io.RandomAccessFile;
 
 public class Log {
-    private static final int SIZE_OFFSET = Integer.SIZE * 2;
+    private static final int BYTE_SIZE = 4;
+    private static final int SIZE_OFFSET = BYTE_SIZE * 2;
     private RandomAccessFile data;
     private int[] buffer = new int[SIZE_OFFSET];
 
@@ -14,11 +15,25 @@ public class Log {
         data = new RandomAccessFile(path, "rw");
     }
 
-    public int add(Command command){
-        return 0;
+    @SneakyThrows
+    public void add(Command command, long id){
+        if(id < 0) throw new IllegalArgumentException("index: " + id + ", cannot be negative");
+        if(command == null) throw new IllegalArgumentException("command cannot be null");
+        data.seek(id * SIZE_OFFSET);
+        data.writeInt(command.id());
+        data.writeInt(command.getValue());
     }
 
-    public Command get(int id){
-        return null;
+    @SneakyThrows
+    public Command get(long id){
+        byte[] buff = new byte[SIZE_OFFSET];
+        data.seek(id * SIZE_OFFSET);
+        data.read(buff);
+        return Command.restore(buff);
+    }
+
+    @SneakyThrows
+    public void close(){
+        data.close();
     }
 }

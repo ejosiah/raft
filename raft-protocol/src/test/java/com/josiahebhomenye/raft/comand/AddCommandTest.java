@@ -5,7 +5,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 
-public class AddCommandTest {
+public class AddCommandTest extends CommandSerializationTest {
 
     @Test
     public void executingAddShouldBeSuccessful(){
@@ -18,5 +18,10 @@ public class AddCommandTest {
     @Test
     public void addCommandShouldGiveTheCorrectId(){
         assertEquals(new Add(0).id(), Command.ADD);
+    }
+
+    @Override
+    Command get() {
+        return new Add(15);
     }
 }

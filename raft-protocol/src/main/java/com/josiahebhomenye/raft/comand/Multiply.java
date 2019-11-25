@@ -7,12 +7,12 @@ public class Multiply extends Command {
     }
 
     @Override
-    void apply(Data data) {
+    public void apply(Data data) {
         data.value(data.value() * value);
     }
 
     @Override
-    int id() {
+    public int id() {
         return MULTIPLY;
     }
 }

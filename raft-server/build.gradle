@@ -1,7 +1,9 @@
 plugins {
     id 'java'
-    id 'application'
+ //   id 'application'
 }
+
+sourceCompatibility = 1.8
 
 dependencies {
 

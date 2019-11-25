@@ -12,7 +12,7 @@ public class Set extends Command {
     }
 
     @Override
-    int id() {
+    public int id() {
         return SET;
     }
 }

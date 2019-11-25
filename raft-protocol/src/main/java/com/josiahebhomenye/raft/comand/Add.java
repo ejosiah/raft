@@ -1,6 +1,8 @@
 package com.josiahebhomenye.raft.comand;
 
 
+import lombok.EqualsAndHashCode;
+
 public class Add extends Command {
 
 
@@ -14,7 +16,7 @@ public class Add extends Command {
     }
 
     @Override
-    int id() {
+    public int id() {
         return ADD;
     }
 }
