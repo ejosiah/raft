@@ -4,23 +4,27 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.With;
+import lombok.experimental.Accessors;
 
 import java.net.InetSocketAddress;
+import java.util.Collections;
+import java.util.List;
 
 @Data
 @With
 @AllArgsConstructor
 @NoArgsConstructor
+@Accessors(fluent = true)
 public class AppendEntries {
-    private int term;
-    private int prevLogIndex;
-    private int prevLogTerm;
-    private int leaderCommit;
+    private long term;
+    private long prevLogIndex;
+    private long prevLogTerm;
+    private long leaderCommit;
     private InetSocketAddress leaderId;
-    private byte[] entries;
+    private List<byte[]> entries;
 
-    public static AppendEntries heartbeat(int term, int prevLogIndex, int prevLogTerm, int leaderCommit, InetSocketAddress leaderId){
-        return new AppendEntries(term, prevLogIndex, prevLogTerm, leaderCommit, leaderId, new byte[0]);
+    public static AppendEntries heartbeat(long term, long prevLogIndex, long prevLogTerm, long leaderCommit, InetSocketAddress leaderId){
+        return new AppendEntries(term, prevLogIndex, prevLogTerm, leaderCommit, leaderId, Collections.emptyList());
     }
 }
 

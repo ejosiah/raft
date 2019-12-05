@@ -8,6 +8,6 @@ import lombok.*;
 @AllArgsConstructor
 @NoArgsConstructor
 public class RequestVoteReply {
-    int term;
+    long term;
     boolean voteGranted;
 }
