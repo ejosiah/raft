@@ -1,20 +1,19 @@
 package com.josiahebhomenye.raft;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.With;
+import lombok.*;
 import lombok.experimental.Accessors;
 
 import java.net.InetSocketAddress;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.IntStream;
 
 @Data
 @With
 @AllArgsConstructor
 @NoArgsConstructor
-@Accessors(fluent = true)
 public class AppendEntries {
     private long term;
     private long prevLogIndex;
@@ -25,6 +24,24 @@ public class AppendEntries {
 
     public static AppendEntries heartbeat(long term, long prevLogIndex, long prevLogTerm, long leaderCommit, InetSocketAddress leaderId){
         return new AppendEntries(term, prevLogIndex, prevLogTerm, leaderCommit, leaderId, Collections.emptyList());
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof AppendEntries)) return false;
+        AppendEntries that = (AppendEntries) o;
+        return term == that.term &&
+                prevLogIndex == that.prevLogIndex &&
+                prevLogTerm == that.prevLogTerm &&
+                leaderCommit == that.leaderCommit &&
+                leaderId.equals(that.leaderId) &&
+                IntStream.range(0, entries.size()).allMatch(i -> Arrays.equals(entries.get(i), ((AppendEntries) o).entries.get(i)));
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(term, prevLogIndex, prevLogTerm, leaderCommit, leaderId, entries);
     }
 }
 

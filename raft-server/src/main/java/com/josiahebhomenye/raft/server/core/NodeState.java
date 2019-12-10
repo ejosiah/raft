@@ -28,12 +28,12 @@ public abstract class NodeState {
     }
 
     public void handle(AppendEntriesEvent event){
-        if(event.msg().term() < node.currentTerm){
+        if(event.msg().getTerm() < node.currentTerm){
             event.sender().writeAndFlush(new AppendEntriesReply(node.currentTerm, false));
             return;
         }
-        LogEntry prevEntry = node.log.get(event.msg().prevLogIndex());
-        if(prevEntry.getTerm() != event.msg().prevLogTerm()){
+        LogEntry prevEntry = node.log.get(event.msg().getPrevLogIndex());
+        if(prevEntry.getTerm() != event.msg().getPrevLogTerm()){
             event.sender().writeAndFlush(new AppendEntriesReply(node.currentTerm, false));
         }
     }

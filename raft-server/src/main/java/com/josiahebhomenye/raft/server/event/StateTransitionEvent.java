@@ -1,6 +1,7 @@
 package com.josiahebhomenye.raft.server.event;
 
 import com.josiahebhomenye.raft.server.core.NodeState;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Value;
@@ -11,6 +12,7 @@ import java.net.InetSocketAddress;
 
 @Value
 @Accessors(fluent = true)
+@EqualsAndHashCode(callSuper=false)
 public class StateTransitionEvent extends Event {
     private NodeState oldState;
     private NodeState newState;

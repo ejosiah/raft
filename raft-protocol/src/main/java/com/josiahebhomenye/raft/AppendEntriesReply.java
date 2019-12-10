@@ -10,7 +10,6 @@ import lombok.experimental.Accessors;
 @With
 @AllArgsConstructor
 @NoArgsConstructor
-@Accessors(fluent = true)
 public class AppendEntriesReply {
     long term;
     boolean success;
