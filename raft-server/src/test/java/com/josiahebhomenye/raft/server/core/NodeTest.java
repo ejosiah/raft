@@ -6,6 +6,7 @@ import com.josiahebhomenye.raft.server.config.ServerConfig;
 import com.typesafe.config.ConfigFactory;
 import lombok.SneakyThrows;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.DataOutputStream;
@@ -25,18 +26,18 @@ public class NodeTest {
     @SneakyThrows
     public void setup(){
         try {
-            Files.delete(Paths.get("log.dat"));
             Files.delete(Paths.get("state.dat"));
         } catch (NoSuchFileException e) {
             // ignore
         }
+        new Log("log.dat").clear();
     }
 
     @Test
     public void ensureInitialStateOnFirstBoot(){
         ServerConfig config = new ServerConfig(ConfigFactory.load());
         Node node = new Node(config);
-        assertEquals(1, node.getCurrentTerm());
+        assertEquals(0, node.getCurrentTerm());
         assertNull(node.getVotedFor());
         assertEquals(NodeState.NULL_STATE, node.getState());
         assertTrue(node.getLog().isEmpty());
@@ -77,11 +78,12 @@ public class NodeTest {
         assertEquals(NodeState.NULL_STATE, node.getState());
         assertEquals(new InetSocketAddress("localhost", 8080), node.getVotedFor());
         assertFalse(node.getLog().isEmpty());
-        assertEquals(new LogEntry(1, new Set(5)), node.getLog().get(0));
+        assertEquals(new LogEntry(1, new Set(5)), node.getLog().get(1));
 
     }
 
     @Test
+    @Ignore
     public void should_reply_false_to_AppendEntries_when_term_is_less_than_currentTerm(){
         fail("Not yet implemented!");
     }

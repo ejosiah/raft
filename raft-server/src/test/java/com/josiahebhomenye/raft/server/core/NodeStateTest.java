@@ -33,7 +33,7 @@ public abstract class NodeStateTest {
     @SneakyThrows
     public void setup(){
         try {
-            Files.delete(Paths.get("log.dat"));
+           // Files.delete(Paths.get("log.dat"));
             Files.delete(Paths.get("state.dat"));
         } catch (NoSuchFileException e) {
             // ignore
@@ -48,6 +48,7 @@ public abstract class NodeStateTest {
         node.channel = channel;
         state = initializeState();
         leaderId = new InetSocketAddress("localhost", 9000);
+        node.log.clear();
     }
 
     @Test

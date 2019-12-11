@@ -8,6 +8,7 @@ import lombok.SneakyThrows;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
@@ -35,17 +36,12 @@ public class LogTest {
     @Before
     @SneakyThrows
     public void setup(){
-        try {
-            Files.delete(Paths.get("log.dat"));
-        } catch (NoSuchFileException e) {
-            // ignore
-        }
+        new Log("log.dat").clear();
     }
 
     @Test
     public void check_that_we_can_read_and_write_to_log(){
         Log log = new Log("log.dat");
-
 
         IntStream.range(0, logEntries.size()).forEach(i -> log.add(logEntries.get(i), i+1));
         IntStream.range(0, logEntries.size()).forEach(i -> assertEquals(log.get(i+1), logEntries.get(i)));

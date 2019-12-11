@@ -10,3 +10,4 @@ gradlew.bat
 **/out/
 **/*.sc
 **/log.dat
+**/state.dat

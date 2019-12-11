@@ -58,4 +58,9 @@ public class Log {
     public long getLastIndex() {
         return ((data.length() - SIZE_OFFSET)/SIZE_OFFSET ) + 1;
     }
+
+    @SneakyThrows
+    public void clear(){
+        data.setLength(0);
+    }
 }
