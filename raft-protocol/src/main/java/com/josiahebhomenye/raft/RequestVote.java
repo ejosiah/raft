@@ -10,8 +10,8 @@ import java.net.InetSocketAddress;
 @AllArgsConstructor
 @NoArgsConstructor
 public class RequestVote {
-    int term;
-    int lastLogIndex;
-    int lastLogTerm;
+    long term;
+    long lastLogIndex;
+    long lastLogTerm;
     InetSocketAddress candidateId;
 }

@@ -2,6 +2,8 @@ package com.josiahebhomenye.raft.server.core;
 
 
 import com.josiahebhomenye.raft.server.config.ServerConfig;
+import com.josiahebhomenye.raft.server.event.ElectionTimeoutEvent;
+import com.josiahebhomenye.raft.server.event.HeartbeatTimeoutEvent;
 import com.josiahebhomenye.raft.server.event.StateTransitionEvent;
 import com.josiahebhomenye.raft.server.handlers.ServerChannelInitializer;
 import com.josiahebhomenye.raft.server.handlers.ServerClientChannelInitializer;
@@ -10,6 +12,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.util.concurrent.ScheduledFuture;
 import lombok.Getter;
 import lombok.SneakyThrows;
 
@@ -19,6 +22,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.josiahebhomenye.raft.server.core.NodeState.FOLLOWER;
@@ -42,6 +46,8 @@ public class Node extends ChannelDuplexHandler {
     ServerConfig config;
     Instant lastheartbeat;
     InetSocketAddress id;
+    int votes;
+    ScheduledFuture<?> scheduledElectionTimeout;
 
     public Node(ServerConfig config){
         this.state = NULL_STATE;
@@ -50,6 +56,7 @@ public class Node extends ChannelDuplexHandler {
         this.id = config.id;
         this.activePeers = new HashMap<>();
         this.peers = new ArrayList<>();
+        votes = 0;
         initStateData();
     }
 
@@ -117,5 +124,33 @@ public class Node extends ChannelDuplexHandler {
 
     public void handle(StateTransitionEvent event){
         event.newState().init();
+    }
+
+    public void scheduleElectionTimeout(){
+        if(cancelElectionTimeOut()) {
+            scheduledElectionTimeout = group.schedule(() -> trigger(new ElectionTimeoutEvent(lastheartbeat, id))
+                    , config.electionTimeout.get(), TimeUnit.MILLISECONDS);
+        }
+    }
+
+    public Long nextTimeout(){
+        return config.electionTimeout.get();
+    }
+
+    private boolean cancelElectionTimeOut(){
+        return scheduledElectionTimeout == null || (!scheduledElectionTimeout.isCancelled()
+                && scheduledElectionTimeout.isCancellable() && scheduledElectionTimeout.cancel(false));
+    }
+
+    public long prevLogIndex(){
+        return log.isEmpty() ? 0 : log.getLastIndex() - 1;
+    }
+
+    public long prevLogTerm(){
+        return log.isEmpty() ? 0 : log.get(log.getLastIndex() - 1).getTerm();
+    }
+
+    public long nextHeartbeatTimeout() {
+        return config.heartbeatTimeout.get();
     }
 }

@@ -1,16 +1,20 @@
 package com.josiahebhomenye.raft.server.core;
 
 import com.josiahebhomenye.raft.AppendEntriesReply;
-import com.josiahebhomenye.raft.server.event.AppendEntriesEvent;
-import com.josiahebhomenye.raft.server.event.ElectionTimeoutEvent;
-import com.josiahebhomenye.raft.server.event.RequestVoteEvent;
-import com.josiahebhomenye.raft.server.event.StateTransitionEvent;
+import com.josiahebhomenye.raft.server.event.*;
+
+import static com.josiahebhomenye.raft.server.core.NodeState.*;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 
 public abstract class NodeState {
 
-    static final NodeState FOLLOWER = new Follower();
-    static final NodeState CANDIDATE = new Candidate();
-    static final NodeState LEADER = new Leader();
+    static final Follower FOLLOWER = new Follower();
+    static final Candidate CANDIDATE = new Candidate();
+    static final Leader LEADER = new Leader();
+    static final NodeState NULL_STATE = new NodeState() {};
 
     protected Node node;
 
@@ -28,46 +32,58 @@ public abstract class NodeState {
     }
 
     public void handle(AppendEntriesEvent event){
+        node.scheduleElectionTimeout();
         if(event.msg().getTerm() < node.currentTerm){
             event.sender().writeAndFlush(new AppendEntriesReply(node.currentTerm, false));
             return;
         }
-        LogEntry prevEntry = node.log.get(event.msg().getPrevLogIndex());
-        if(prevEntry.getTerm() != event.msg().getPrevLogTerm()){
-            event.sender().writeAndFlush(new AppendEntriesReply(node.currentTerm, false));
+
+        if(!node.log.isEmpty()) {
+            LogEntry prevEntry = node.log.get(event.msg().getPrevLogIndex());
+            if (prevEntry.getTerm() != event.msg().getPrevLogTerm()) {
+                event.sender().writeAndFlush(new AppendEntriesReply(node.currentTerm, false));
+                return;
+            }
         }
+
+        if(!event.msg().getEntries().isEmpty()) {
+            List<LogEntry> entries = event.msg().getEntries().stream().map(LogEntry::deserialize).collect(Collectors.toList());
+
+            long nexEntryIndex = event.msg().getPrevLogIndex() + 1L;
+            if (node.log.size() >= nexEntryIndex) {
+                LogEntry entry = node.log.get(nexEntryIndex);
+                if (entry.getTerm() != entries.get(0).getTerm()){
+                    node.log.deleteFromIndex(nexEntryIndex);
+                }
+            }
+            IntStream.range(0, entries.size()).forEach(i -> node.log.add(entries.get(i), nexEntryIndex + i));
+        }
+        node.currentTerm = event.msg().getTerm();
+        if(event.msg().getLeaderCommit() > node.commitIndex){
+            node.commitIndex = Math.min(event.msg().getLeaderCommit(), node.log.getLastIndex());
+            if(this != FOLLOWER){
+                transitionTo(FOLLOWER);
+            }
+        }
+        event.sender().writeAndFlush(new AppendEntriesReply(node.currentTerm, true));
     }
 
-    public abstract void init();
+    public void init(){}
 
-    public abstract void handle(ElectionTimeoutEvent event);
+    public void handle(ElectionTimeoutEvent event){}
 
-    public abstract void handle(RequestVoteEvent event);
+    public void handle(RequestVoteEvent event){}
 
-    public static final NodeState NULL_STATE = new NodeState() {
+    public void handle(RequestVoteReplyEvent event){}
 
-        @Override
-        public void handle(AppendEntriesEvent event) {
-
-        }
-
-        @Override
-        public void init() {
-
-        }
-
-        @Override
-        public void handle(ElectionTimeoutEvent event) {
-
-        }
-
-        @Override
-        public void handle(RequestVoteEvent event) {
-
-        }
-    };
+    public void handle(HeartbeatTimeoutEvent heartbeatTimeoutEvent){}
 
     public String name(){
         return this.getClass().getSimpleName();
+    }
+
+    @Override
+    public String toString() {
+        return name();
     }
 }

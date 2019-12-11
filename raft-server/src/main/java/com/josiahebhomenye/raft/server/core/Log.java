@@ -63,4 +63,15 @@ public class Log {
     public void clear(){
         data.setLength(0);
     }
+
+    public long size() {
+        return getLastIndex();
+    }
+
+    @SneakyThrows
+    public void deleteFromIndex(long i) {
+        if(i > getLastIndex()) return;
+        long newSize = (i - 1) * SIZE_OFFSET;
+        data.setLength(newSize);
+    }
 }

@@ -8,13 +8,14 @@ import com.josiahebhomenye.raft.comand.Set;
 import com.josiahebhomenye.raft.comand.Subtract;
 import com.josiahebhomenye.raft.server.event.ElectionTimeoutEvent;
 import com.josiahebhomenye.raft.server.event.RequestVoteEvent;
+import com.josiahebhomenye.raft.server.event.ScheduleTimeoutEvent;
 import lombok.SneakyThrows;
 import org.junit.Test;
 import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.time.Instant;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 public class FollowerTest extends NodeStateTest{
 
@@ -22,10 +23,8 @@ public class FollowerTest extends NodeStateTest{
 
     @Override
     public NodeState initializeState() {
-        follower = new Follower();
+        follower = NodeState.FOLLOWER;
         follower.set(node);
-        node.state = follower;
-
         return follower;
     }
 
@@ -33,12 +32,10 @@ public class FollowerTest extends NodeStateTest{
     public void initialization_should_schedule_election_timeout() throws Exception{
         follower.init();
 
-        Thread.sleep(400L);
+        ScheduleTimeoutEvent event = userEventCapture.get(0);
 
-        ElectionTimeoutEvent expected = new ElectionTimeoutEvent(null, node.id);
-        ElectionTimeoutEvent actual = userEventCapture.get();
-
-        assertEquals(expected, actual);
+        assertEquals(node.state, follower);
+        assertTrue(event.timeout() >= 150 && event.timeout() <= 300);
     }
 
     @Test
@@ -66,13 +63,10 @@ public class FollowerTest extends NodeStateTest{
 
         follower.handle(new ElectionTimeoutEvent(lastHeartbeat, node.id));
 
-        Thread.sleep(400L);
-
-        ElectionTimeoutEvent expected = new ElectionTimeoutEvent(node.lastheartbeat, node.id);
-        ElectionTimeoutEvent actual = userEventCapture.get();
+        ScheduleTimeoutEvent event = userEventCapture.get(0);
 
         assertEquals(node.state, follower);
-        assertEquals(expected, actual);
+        assertTrue(event.timeout() >= 150 && event.timeout() <= 300);
     }
 
     @Test
@@ -91,6 +85,7 @@ public class FollowerTest extends NodeStateTest{
 
         RequestVoteReply reply = channel.readOutbound();
         assertEquals(new RequestVoteReply(node.currentTerm, false), reply);
+        assertEquals(node.state, NodeState.FOLLOWER);
     }
 
     @Test
@@ -110,6 +105,7 @@ public class FollowerTest extends NodeStateTest{
 
         RequestVoteReply reply = channel.readOutbound();
         assertEquals(new RequestVoteReply(node.currentTerm, false), reply);
+        assertEquals(node.state, NodeState.FOLLOWER);
     }
 
     @Test
@@ -132,6 +128,7 @@ public class FollowerTest extends NodeStateTest{
 
         RequestVoteReply reply = channel.readOutbound();
         assertEquals(new RequestVoteReply(node.currentTerm, false), reply);
+        assertEquals(node.state, NodeState.FOLLOWER);
     }
 
     @Test
@@ -154,6 +151,7 @@ public class FollowerTest extends NodeStateTest{
 
         RequestVoteReply reply = channel.readOutbound();
         assertEquals(new RequestVoteReply(node.currentTerm, false), reply);
+        assertEquals(node.state, NodeState.FOLLOWER);
     }
 
     @Test
@@ -175,5 +173,6 @@ public class FollowerTest extends NodeStateTest{
 
         RequestVoteReply reply = channel.readOutbound();
         assertEquals(new RequestVoteReply(node.currentTerm, true), reply);
+        assertEquals(node.state, NodeState.FOLLOWER);
     }
 }
