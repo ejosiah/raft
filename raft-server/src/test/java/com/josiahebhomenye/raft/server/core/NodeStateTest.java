@@ -49,7 +49,7 @@ public abstract class NodeStateTest {
         ServerConfig config = new ServerConfig(ConfigFactory.load());
         node = new Node(config);
         node.group = group;
-        channel = new EmbeddedChannel(userEventCapture, node);
+        channel = new EmbeddedChannel(userEventCapture);
         node.channel = channel;
         node.id = new InetSocketAddress("localhost", 8000);
         state = initializeState();
