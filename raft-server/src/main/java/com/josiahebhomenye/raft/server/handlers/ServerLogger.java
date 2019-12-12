@@ -1,6 +1,8 @@
 package com.josiahebhomenye.raft.server.handlers;
 
 import com.josiahebhomenye.raft.server.core.Node;
+import com.josiahebhomenye.raft.server.event.AppendEntriesEvent;
+import com.josiahebhomenye.raft.server.event.ElectionTimeoutEvent;
 import com.josiahebhomenye.raft.server.event.PeerConnectedEvent;
 import com.josiahebhomenye.raft.server.event.StateTransitionEvent;
 import io.netty.channel.*;

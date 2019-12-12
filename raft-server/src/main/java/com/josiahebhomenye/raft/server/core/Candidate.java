@@ -37,7 +37,10 @@ public class Candidate extends NodeState {
 
     @Override
     public void handle(AppendEntriesEvent event) {
-        transitionTo(FOLLOWER);
-        node.trigger(event);
+        if(event.msg().getTerm() >= node.currentTerm) {
+            transitionTo(FOLLOWER);
+            node.trigger(event);
+        }
+        // TODO need to reply
     }
 }

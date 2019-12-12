@@ -9,6 +9,7 @@
     </appender>
 
     <logger name="com.josiahebhomenye.raft.server" level="DEBUG"/>
+    <logger name="Node" level="DEBUG"/>
 
     <root level="INFO">
         <appender-ref ref="STDOUT" />

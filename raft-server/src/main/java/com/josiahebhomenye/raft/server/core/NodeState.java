@@ -3,18 +3,16 @@ package com.josiahebhomenye.raft.server.core;
 import com.josiahebhomenye.raft.AppendEntriesReply;
 import com.josiahebhomenye.raft.server.event.*;
 
-import static com.josiahebhomenye.raft.server.core.NodeState.*;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.LongStream;
 
 public abstract class NodeState {
 
-    static final Follower FOLLOWER = new Follower();
-    static final Candidate CANDIDATE = new Candidate();
-    static final Leader LEADER = new Leader();
-    static final NodeState NULL_STATE = new NodeState() {};
+    public static final Follower FOLLOWER = new Follower();
+    public static final Candidate CANDIDATE = new Candidate();
+    public static final Leader LEADER = new Leader();
+    public static final NodeState NULL_STATE = new NodeState() {};
 
     protected Node node;
 

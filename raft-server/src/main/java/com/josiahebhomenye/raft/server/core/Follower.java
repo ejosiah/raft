@@ -8,13 +8,15 @@ import java.util.concurrent.TimeUnit;
 
 public class Follower extends NodeState {
 
+    protected Follower(){}
+
     public void init() {
         node.trigger(new ScheduleTimeoutEvent(node.id, node.nextTimeout()));
     }
 
     @Override
     public void handle(ElectionTimeoutEvent event) {
-        if(receivedHeartbeatSinceLast(event.lastheartbeat)){
+        if(node.receivedHeartbeatSinceLast(event.lastheartbeat)){
             node.trigger(new ScheduleTimeoutEvent(node.id, node.nextTimeout()));
         }else{
             transitionTo(CANDIDATE);
@@ -33,9 +35,5 @@ public class Follower extends NodeState {
     private boolean logEntryIsNotUpToDate(RequestVoteEvent event){
         return event.requestVote().getLastLogTerm() < node.log.lastEntry().getTerm()
                 || event.requestVote().getLastLogIndex() < node.log.getLastIndex();
-    }
-
-    private boolean receivedHeartbeatSinceLast(Instant heartbeat){
-        return heartbeat != node.lastheartbeat && heartbeat.isBefore(node.lastheartbeat);
     }
 }

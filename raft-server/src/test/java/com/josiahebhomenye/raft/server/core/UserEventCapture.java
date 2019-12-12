@@ -38,4 +38,8 @@ public class UserEventCapture extends ChannelDuplexHandler {
     public void clear(){
         events.clear();
     }
+
+    public int captured(){
+        return events.size();
+    }
 }

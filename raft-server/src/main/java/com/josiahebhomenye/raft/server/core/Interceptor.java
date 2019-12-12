@@ -9,5 +9,5 @@ import lombok.experimental.Accessors;
 public abstract class Interceptor extends ChannelDuplexHandler {
 
     @Setter
-    private Node node;
+    protected Node node;
 }

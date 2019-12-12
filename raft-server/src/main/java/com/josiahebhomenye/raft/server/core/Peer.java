@@ -44,7 +44,7 @@ public class Peer {
     }
 
     public void send(Object msg){
-        channel.writeAndFlush(msg);
+        channel.writeAndFlush(msg); // TODO set timeout and retry if no reply
     }
 
     @ChannelHandler.Sharable
@@ -66,6 +66,11 @@ public class Peer {
             if(msg instanceof RequestVoteReply){
                 serverChannel.pipeline().fireUserEventTriggered(new RequestVoteReplyEvent((RequestVoteReply)msg, ctx.channel()));
             }
+        }
+
+        @Override
+        public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            super.disconnect(ctx, promise); // TODO fire Channel Disconnected event and try to restart peer
         }
     }
 

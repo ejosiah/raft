@@ -81,7 +81,7 @@ public class CandidateTest extends NodeStateTest {
     @Test
     public void revert_to_follower_if_append_entries_received_from_new_leader(){
         node.currentTerm = 1;
-        long leaderTerm = 1;
+        long leaderTerm = 2;
         long leaderCommit = 3;
         long prevLogIndex = 3;
         long prevLogTerm = 2;
@@ -95,29 +95,23 @@ public class CandidateTest extends NodeStateTest {
 
         assertEquals(new StateTransitionEvent(CANDIDATE, FOLLOWER, node.id), event);
         assertEquals(expectedAppendEntriesEvent, appendEntriesEvent);
+        assertEquals(FOLLOWER, node.state);
     }
 
     @Test
-    @Ignore // TODO put this in leader
-    public void revert_to_follower_when_current_term_is_less_than_term_in_append_entries_rpc(){
-
+    public void stay_as_candidate_if_append_entries_term_is_less_then_current_term(){
         node.currentTerm = 2;
-        long leaderTerm = 3;
-        long leaderCommit = 3;
-        long prevLogIndex = 3;
-        long prevLogTerm = 2;
+        long leaderTerm = 1;
+        long leaderCommit = 0;
+        long prevLogIndex = 0;
+        long prevLogTerm = 1;
 
         AppendEntries appendEntries = AppendEntries.heartbeat(leaderTerm, prevLogIndex, prevLogTerm, leaderCommit, leaderId);
+        AppendEntriesEvent expectedAppendEntriesEvent = new AppendEntriesEvent(appendEntries, channel);
+        candidate.handle(expectedAppendEntriesEvent);
 
-        candidate.handle(new AppendEntriesEvent(appendEntries, channel));
-
-        assertEquals(leaderTerm, node.currentTerm);
-        assertEquals(NodeState.FOLLOWER, node.state);
-
-        AppendEntriesReply expected = new AppendEntriesReply(leaderTerm, true);
-        AppendEntriesReply actual = channel.readOutbound();
-
-        assertEquals(expected, actual);
+        assertEquals(0, userEventCapture.captured());
+        assertEquals(CANDIDATE, node.state);
     }
 
     @Test

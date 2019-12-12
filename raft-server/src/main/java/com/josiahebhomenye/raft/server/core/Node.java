@@ -1,6 +1,7 @@
 package com.josiahebhomenye.raft.server.core;
 
 
+import com.josiahebhomenye.raft.AppendEntries;
 import com.josiahebhomenye.raft.AppendEntriesReply;
 import com.josiahebhomenye.raft.RequestVoteReply;
 import com.josiahebhomenye.raft.server.config.ElectionTimeout;
@@ -86,7 +87,7 @@ public class Node extends ChannelDuplexHandler {
             .group(group, clientGroup)
             .channel(NioServerSocketChannel.class)
             .handler(new ServerChannelInitializer(this))
-            .childHandler(new ServerClientChannelInitializer())
+            .childHandler(new ServerClientChannelInitializer(this))
             .localAddress(id)
         .bind().sync();
     }
@@ -131,6 +132,7 @@ public class Node extends ChannelDuplexHandler {
     }
 
     public void handle(AppendEntriesEvent event){
+        lastheartbeat = Instant.now();
         state.handle(event);
     }
 
@@ -150,6 +152,7 @@ public class Node extends ChannelDuplexHandler {
     }
 
     public void handle(ElectionTimeoutEvent event){
+        scheduledElectionTimeout = null;
         state.handle(event);
     }
 
@@ -194,5 +197,23 @@ public class Node extends ChannelDuplexHandler {
     public void addPostProcessInterceptors(ChannelDuplexHandler... interceptors){
         Arrays.stream(interceptors).filter(i -> i instanceof Interceptor).map(i -> (Interceptor)i).forEach(i -> i.node(this));
         postProcessInterceptors.addAll(Arrays.asList(interceptors));
+    }
+
+    public boolean receivedHeartbeatSinceLast(Instant heartbeat){
+        return lastheartbeat != null  && heartbeat.isBefore(lastheartbeat);
+    }
+
+    public class ChildHandler extends ChannelDuplexHandler{
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            if(Node.this.stopped()) return;
+            if(msg instanceof AppendEntries){
+                Node.this.trigger(new AppendEntriesEvent((AppendEntries)msg, ctx.channel()));
+            }
+        }
+    }
+
+    private boolean stopped() {
+        return group.isShutdown();
     }
 }
