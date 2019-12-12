@@ -57,7 +57,9 @@ public abstract class JsonDecoderTest<T> {
         EmbeddedChannel channel = new EmbeddedChannel(decoder());
 
         ByteBuf buf = createBuffer("This is What we need to do");
-        assertFalse(channel.writeInbound(buf));
+        channel.writeInbound(buf);
+
+        assertEquals(buf, channel.readInbound());
     }
 
 
@@ -70,7 +72,9 @@ public abstract class JsonDecoderTest<T> {
         buf.writeInt(String.class.getName().length());
         buf.writeBytes(String.class.getName().getBytes());
 
-        assertFalse(channel.writeInbound(buf));
+        channel.writeInbound(buf);
+
+        assertEquals(buf, channel.readInbound());
     }
 
     @Test

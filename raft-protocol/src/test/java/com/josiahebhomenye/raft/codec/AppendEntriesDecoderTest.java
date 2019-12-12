@@ -14,7 +14,7 @@ import static org.junit.Assert.*;
 public class AppendEntriesDecoderTest extends JsonDecoderTest<AppendEntries> implements AppendEntriesTestFactory{
 
 
-        @Test
+    @Test
     public void decodeAppendEntriesWithNoEntries(){
         EmbeddedChannel channel = new EmbeddedChannel(decoder());
 
