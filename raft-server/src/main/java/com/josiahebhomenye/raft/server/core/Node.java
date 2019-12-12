@@ -165,7 +165,7 @@ public class Node extends ChannelDuplexHandler {
     }
 
     public void handle(HeartbeatTimeoutEvent event){
-        trigger(new ScheduleHeartbeatTimeoutEvent(id, nextHeartbeatTimeout()));
+        state.handle(event);
     }
 
     public void handle(PeerConnectedEvent event){
