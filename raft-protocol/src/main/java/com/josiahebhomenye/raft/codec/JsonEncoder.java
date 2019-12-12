@@ -24,7 +24,7 @@ public class JsonEncoder<T> extends MessageToByteEncoder<T> {
         String  clazz = msg.getClass().getName();
 
         out.writeInt(MessageType.JSON.getValue());
-        out.writeInt(clazz.length());
+        out.writeInt(clazz.getBytes().length);
         out.writeBytes(clazz.getBytes());
         out.writeInt(json.length);
         out.writeBytes(json);

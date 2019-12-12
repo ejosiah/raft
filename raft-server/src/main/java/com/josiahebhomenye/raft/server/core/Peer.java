@@ -1,6 +1,8 @@
 package com.josiahebhomenye.raft.server.core;
 
+import com.josiahebhomenye.raft.RequestVoteReply;
 import com.josiahebhomenye.raft.server.event.PeerConnectedEvent;
+import com.josiahebhomenye.raft.server.event.RequestVoteReplyEvent;
 import com.josiahebhomenye.raft.server.handlers.PeerChannelInitializer;
 import com.josiahebhomenye.raft.server.handlers.PeerLogger;
 import io.netty.bootstrap.Bootstrap;
@@ -46,7 +48,7 @@ public class Peer {
     }
 
     @ChannelHandler.Sharable
-    public class ConnectionHandler extends ChannelOutboundHandlerAdapter {
+    public class ConnectionHandler extends ChannelDuplexHandler {
 
         @Override
         public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) throws Exception {
@@ -58,5 +60,17 @@ public class Peer {
             });
             super.connect(ctx, remoteAddress, localAddress, promise);
         }
+
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            if(msg instanceof RequestVoteReply){
+                serverChannel.pipeline().fireUserEventTriggered(new RequestVoteReplyEvent((RequestVoteReply)msg, ctx.channel()));
+            }
+        }
+    }
+
+    @Override
+    public String toString() {
+        return String.format("Peer[%s]", id);
     }
 }

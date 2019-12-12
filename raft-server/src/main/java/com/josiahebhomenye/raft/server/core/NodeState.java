@@ -32,7 +32,7 @@ public abstract class NodeState {
     }
 
     public void handle(AppendEntriesEvent event){
-        node.scheduleElectionTimeout();
+        node.trigger(new ScheduleTimeoutEvent(node.id, node.nextTimeout()));
         if(event.msg().getTerm() < node.currentTerm){
             event.sender().writeAndFlush(new AppendEntriesReply(node.currentTerm, false));
             return;

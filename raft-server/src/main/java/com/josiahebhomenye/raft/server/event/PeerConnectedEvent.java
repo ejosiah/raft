@@ -12,8 +12,10 @@ import lombok.experimental.Accessors;
 @Accessors(fluent = true)
 @EqualsAndHashCode(callSuper=false)
 public class PeerConnectedEvent extends Event {
+    private Peer peer;
 
     public PeerConnectedEvent(Peer peer){
         super(peer.getId());
+        this.peer = peer;
     }
 }

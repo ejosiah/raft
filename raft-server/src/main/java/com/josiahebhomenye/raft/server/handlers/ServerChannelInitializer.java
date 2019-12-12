@@ -1,6 +1,7 @@
 package com.josiahebhomenye.raft.server.handlers;
 
 import com.josiahebhomenye.raft.server.core.Node;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import lombok.RequiredArgsConstructor;
 
@@ -12,8 +13,13 @@ public class ServerChannelInitializer extends ProtocolInitializer<NioServerSocke
     @Override
     protected void initChannel(NioServerSocketChannel ch) throws Exception {
         super.initChannel(ch);
-        ch.pipeline()
-          .addLast(node)
-          .addLast(new ServerLogger(node));
+
+        ChannelPipeline pipeline = ch.pipeline();
+
+        node.getPreProcessInterceptors().forEach(pipeline::addLast);
+        pipeline
+            .addLast(node)
+            .addLast(new ServerLogger(node));
+        node.getPostProcessInterceptors().forEach(pipeline::addLast);
     }
 }

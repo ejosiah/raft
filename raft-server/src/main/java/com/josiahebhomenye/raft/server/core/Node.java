@@ -1,10 +1,11 @@
 package com.josiahebhomenye.raft.server.core;
 
 
+import com.josiahebhomenye.raft.AppendEntriesReply;
+import com.josiahebhomenye.raft.RequestVoteReply;
+import com.josiahebhomenye.raft.server.config.ElectionTimeout;
 import com.josiahebhomenye.raft.server.config.ServerConfig;
-import com.josiahebhomenye.raft.server.event.ElectionTimeoutEvent;
-import com.josiahebhomenye.raft.server.event.HeartbeatTimeoutEvent;
-import com.josiahebhomenye.raft.server.event.StateTransitionEvent;
+import com.josiahebhomenye.raft.server.event.*;
 import com.josiahebhomenye.raft.server.handlers.ServerChannelInitializer;
 import com.josiahebhomenye.raft.server.handlers.ServerClientChannelInitializer;
 import com.josiahebhomenye.raft.server.util.Dynamic;
@@ -48,6 +49,9 @@ public class Node extends ChannelDuplexHandler {
     InetSocketAddress id;
     int votes;
     ScheduledFuture<?> scheduledElectionTimeout;
+
+    List<ChannelDuplexHandler> preProcessInterceptors = new ArrayList<>();
+    List<ChannelDuplexHandler> postProcessInterceptors = new ArrayList<>();
 
     public Node(ServerConfig config){
         this.state = NULL_STATE;
@@ -117,20 +121,48 @@ public class Node extends ChannelDuplexHandler {
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         Optional<?> invoked = Dynamic.invoke(this, "handle", evt);
-        if(!invoked.isPresent()){
-            ctx.fireUserEventTriggered(evt);
-        }
+        ctx.fireUserEventTriggered(evt);
     }
+
+
 
     public void handle(StateTransitionEvent event){
-        event.newState().init();
+        state.init();
     }
 
-    public void scheduleElectionTimeout(){
+    public void handle(AppendEntriesEvent event){
+        state.handle(event);
+    }
+
+    public void handle(RequestVoteReplyEvent event){
+        state.handle(event);
+    }
+
+    public void handle(RequestVoteEvent event){
+        state.handle(event);
+    }
+
+    public void handle(ScheduleTimeoutEvent event){
         if(cancelElectionTimeOut()) {
             scheduledElectionTimeout = group.schedule(() -> trigger(new ElectionTimeoutEvent(lastheartbeat, id))
-                    , config.electionTimeout.get(), TimeUnit.MILLISECONDS);
+                    , event.timeout(), TimeUnit.MILLISECONDS);
         }
+    }
+
+    public void handle(ElectionTimeoutEvent event){
+        state.handle(event);
+    }
+
+    public void handle(ScheduleHeartbeatTimeoutEvent event){
+        group.schedule(() -> trigger(new HeartbeatTimeoutEvent(id)), event.timeout(), TimeUnit.MILLISECONDS);
+    }
+
+    public void handle(SendRequestVoteEvent event){
+        activePeers.values().forEach(peer -> peer.send(event.requestVote()));
+    }
+
+    public void handle(PeerConnectedEvent event){
+        activePeers.put(event.peer().id, event.peer());
     }
 
     public Long nextTimeout(){
@@ -152,5 +184,15 @@ public class Node extends ChannelDuplexHandler {
 
     public long nextHeartbeatTimeout() {
         return config.heartbeatTimeout.get();
+    }
+
+    public void addPreProcessInterceptors(ChannelDuplexHandler... interceptors){
+        Arrays.stream(interceptors).filter(i -> i instanceof Interceptor).map(i -> (Interceptor)i).forEach(i -> i.node(this));
+        preProcessInterceptors.addAll(Arrays.asList(interceptors));
+    }
+
+    public void addPostProcessInterceptors(ChannelDuplexHandler... interceptors){
+        Arrays.stream(interceptors).filter(i -> i instanceof Interceptor).map(i -> (Interceptor)i).forEach(i -> i.node(this));
+        postProcessInterceptors.addAll(Arrays.asList(interceptors));
     }
 }

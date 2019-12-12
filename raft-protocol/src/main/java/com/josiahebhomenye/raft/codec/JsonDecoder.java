@@ -34,6 +34,8 @@ public class JsonDecoder<T> extends ByteToMessageDecoder {
             int type = in.readInt();
             if(type != MessageType.JSON.getValue()){
                 in.resetReaderIndex();
+                reset();
+                ctx.fireChannelRead(in.retain());
                 return;
             }
             state = State.CLASS_TYPE_LENGTH;
@@ -55,6 +57,8 @@ public class JsonDecoder<T> extends ByteToMessageDecoder {
 
             if(sClaszz != clazz){
                 in.resetReaderIndex();
+                reset();
+                ctx.fireChannelRead(in.retain());
                 return;
             }
             state = State.JSON_LENGTH;
@@ -74,6 +78,11 @@ public class JsonDecoder<T> extends ByteToMessageDecoder {
         in.readBytes(buf);
         T msg = mapper.readValue(buf, clazz);
         out.add(msg);
+        reset();
+    }
+
+    void reset(){
         state = State.MESSAGE_TYPE;
+        length = 0;
     }
 }
