@@ -17,9 +17,12 @@ import org.slf4j.LoggerFactory;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -36,6 +39,7 @@ public class RemotePeerMock {
     private Channel channel;
     private static final Logger logger = LoggerFactory.getLogger("RemotePeerMock");
     private ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    private List<ScheduledFuture<?>> scheduled = new ArrayList<>();
 
     @ChannelHandler.Sharable
     private class MessageHandler extends ChannelDuplexHandler {
@@ -126,10 +130,12 @@ public class RemotePeerMock {
 
     public void send(Object msg, Long repeat){
         if(repeat != null){
-            scheduler.scheduleAtFixedRate(() -> {
-                channel.writeAndFlush(msg);
-              //  logger.info("sending message {} to server", msg);
-            }, 0, repeat, TimeUnit.MILLISECONDS);
+            scheduled.add(
+                scheduler.scheduleAtFixedRate(() -> {
+                    channel.writeAndFlush(msg);
+                  //  logger.info("sending message {} to server", msg);
+                }, 0, repeat, TimeUnit.MILLISECONDS)
+            );
         }else {
             channel.writeAndFlush(msg);
         }
@@ -137,6 +143,7 @@ public class RemotePeerMock {
 
     @SneakyThrows
     public void stop(){
+        scheduled.forEach(s -> s.cancel(true));
         group.shutdownGracefully().sync();
         clientGroup.shutdownGracefully().sync();
         logger.info("remote peer {} going offline", address);

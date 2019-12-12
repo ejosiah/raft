@@ -29,11 +29,14 @@ public class LeaderElectionTest {
     UserEventCapture userEventCapture = new UserEventCapture();
     List<RemotePeerMock> peers = new ArrayList<>();
     ServerConfig config = new ServerConfig(ConfigFactory.load());
+    CountDownLatch testLatch;
+    CountDownLatch nodeLatch;
     Node node;
 
     @Before
     public void setup(){
-
+        testLatch = new CountDownLatch(1);
+        nodeLatch = new CountDownLatch(1);
         userEventCapture.ignore(PeerConnectedEvent.class, AppendEntriesEvent.class, RequestVoteReplyEvent.class);
 
         config.peers.forEach(address -> peers.add(new RemotePeerMock(address, config.id)));
@@ -43,6 +46,7 @@ public class LeaderElectionTest {
     @After
     public void tearDown(){
         peers.forEach(RemotePeerMock::stop);
+        nodeLatch.countDown();
         node.stop();
         node = null;
     }
@@ -56,16 +60,15 @@ public class LeaderElectionTest {
                 ctx.writeAndFlush(new RequestVoteReply(msg.getTerm(), true));
             });
         });
-        CountDownLatch latch = new CountDownLatch(1);
 
         node = new Node(config);
         node.addPreProcessInterceptors(userEventCapture);
-        node.addPostProcessInterceptors(new NodeWaitLatch(latch, (Node, evt) -> {
+        node.addPostProcessInterceptors(new NodeWaitLatch(testLatch, nodeLatch, (Node, evt) -> {
            return evt instanceof HeartbeatTimeoutEvent && node.currentTerm == 1;
         }));
         node.start();
 
-        latch.await(10, TimeUnit.SECONDS);
+        testLatch.await(10, TimeUnit.SECONDS);
 
         assertEquals(1L, node.currentTerm);
         assertEquals(node.id, node.votedFor);
@@ -95,16 +98,14 @@ public class LeaderElectionTest {
             });
         });
 
-        CountDownLatch latch = new CountDownLatch(1);
-
         node = new Node(config);
         node.addPreProcessInterceptors(userEventCapture);
-        node.addPostProcessInterceptors(new NodeWaitLatch(latch, (Node, evt) -> {
+        node.addPostProcessInterceptors(new NodeWaitLatch(testLatch, nodeLatch, (Node, evt) -> {
             return evt instanceof HeartbeatTimeoutEvent && node.currentTerm == 2;
         }));
         node.start();
 
-        latch.await(10, TimeUnit.SECONDS);
+        testLatch.await(10, TimeUnit.SECONDS);
 
         assertEquals(2L, node.currentTerm);
         assertEquals(node.id, node.votedFor);
@@ -140,21 +141,16 @@ public class LeaderElectionTest {
             });
         });
 
-        CountDownLatch latch = new CountDownLatch(1);
-
         node = new Node(config);
         node.addPreProcessInterceptors(new PreElectionSetup(peers));
-        node.addPreProcessInterceptors(new NodeWaitLatch(latch, (Node, evt) -> {
+        node.addPreProcessInterceptors(userEventCapture);
+        node.addPostProcessInterceptors(new NodeWaitLatch(testLatch, nodeLatch, (Node, evt) -> {
             return evt.equals(new StateTransitionEvent(CANDIDATE, FOLLOWER, node.id));
         }));
-        node.addPreProcessInterceptors(userEventCapture);
 
         node.start();
 
-        if(!latch.await(10, TimeUnit.SECONDS)){
-            LoggerFactory.getLogger(this.getClass()).info("latch did not release before timeout");
-        }
-        node.stop();
+        testLatch.await(10, TimeUnit.SECONDS);
 
         assertEquals(1L, node.currentTerm);
         assertEquals(node.id, node.votedFor);

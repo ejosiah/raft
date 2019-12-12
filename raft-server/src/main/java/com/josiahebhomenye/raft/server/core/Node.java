@@ -164,6 +164,10 @@ public class Node extends ChannelDuplexHandler {
         activePeers.values().forEach(peer -> peer.send(event.requestVote()));
     }
 
+    public void handle(HeartbeatTimeoutEvent event){
+        trigger(new ScheduleHeartbeatTimeoutEvent(id, nextHeartbeatTimeout()));
+    }
+
     public void handle(PeerConnectedEvent event){
         activePeers.put(event.peer().id, event.peer());
     }
