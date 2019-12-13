@@ -34,13 +34,4 @@ public class Candidate extends NodeState {
     private boolean receivedMajorityVotes(){
         return node.votes >= node.config.majority || (float)(node.votes/node.activePeers.size()) >= 0.5;
     }
-
-    @Override
-    public void handle(AppendEntriesEvent event) {
-        if(event.msg().getTerm() >= node.currentTerm) {
-            transitionTo(FOLLOWER);
-            node.trigger(event);
-        }
-        // TODO need to reply
-    }
 }

@@ -2,12 +2,15 @@ package com.josiahebhomenye.raft.server.core;
 
 import com.josiahebhomenye.raft.AppendEntries;
 import com.josiahebhomenye.raft.AppendEntriesReply;
+import com.josiahebhomenye.raft.RequestVote;
 import com.josiahebhomenye.raft.comand.Add;
 import com.josiahebhomenye.raft.comand.Command;
 import com.josiahebhomenye.raft.comand.Set;
 import com.josiahebhomenye.raft.comand.Subtract;
 import com.josiahebhomenye.raft.server.config.ServerConfig;
 import com.josiahebhomenye.raft.server.event.AppendEntriesEvent;
+import com.josiahebhomenye.raft.server.event.RequestVoteEvent;
+import com.josiahebhomenye.raft.server.event.StateTransitionEvent;
 import com.typesafe.config.ConfigFactory;
 import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
@@ -23,6 +26,8 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.josiahebhomenye.raft.server.core.NodeState.CANDIDATE;
+import static com.josiahebhomenye.raft.server.core.NodeState.FOLLOWER;
 import static org.junit.Assert.*;
 
 public abstract class NodeStateTest {
@@ -33,6 +38,7 @@ public abstract class NodeStateTest {
     NodeState state;
     Node node;
     InetSocketAddress leaderId;
+    List<Peer> peers;
 
     @Before
     @SneakyThrows
@@ -56,78 +62,54 @@ public abstract class NodeStateTest {
         leaderId = new InetSocketAddress("localhost", 9000);
         node.log.clear();
         userEventCapture.clear();
+        node.activePeers.clear();
+
+        peers = new ArrayList<>();
+
+
+        peers.add(new Peer(new InetSocketAddress(9001), node.channel, null).set(channel));
+        peers.add(new Peer(new InetSocketAddress(9002), node.channel, null).set(channel));
+        peers.add(new Peer(new InetSocketAddress(9003), node.channel, null).set(channel));
+        peers.add(new Peer(new InetSocketAddress(9004), node.channel, null).set(channel));
     }
 
     @Test
-    public void reply_false_to_append_entry_message_if_leaders_term_is_behind(){
-        if(state == NodeState.LEADER || state == NodeState.CANDIDATE) return;
-        node.currentTerm = 2;
-        AppendEntries entries = AppendEntries.heartbeat(node.currentTerm - 1, 0, 0, 0, leaderId);
-
-        state.handle(new AppendEntriesEvent(entries, channel));
-
-        AppendEntriesReply expected = new AppendEntriesReply(2, false);
-        AppendEntriesReply actual = channel.readOutbound();
-
-        assertEquals(expected, actual);
-
-    }
-
-    @Test
-    public void reply_false_to_append_entry_message_if_log_does_not_contain_an_entry_with_previous_log_term(){
-        if(state == NodeState.LEADER || state == NodeState.CANDIDATE) return;
-
-        node.currentTerm = 4;
-
-        node.log.add(new LogEntry(1, new Set(5)), 1);
-        node.log.add(new LogEntry(2, new Add(1)), 2);
-        node.log.add(new LogEntry(2, new Set(3)), 3);
-        node.log.add(new LogEntry(3, new Set(2)), 4);
-
-        AppendEntries entries = AppendEntries.heartbeat(node.currentTerm, 3, 3, 0, leaderId);
-
-        state.handle(new AppendEntriesEvent(entries, channel));
-
-        AppendEntriesReply expected = new AppendEntriesReply(node.currentTerm, false);
-        AppendEntriesReply actual = channel.readOutbound();
-
-        assertEquals(expected, actual);
-    }
-
-    @Test
-    public void delete_exiting_entries_that_conflict_with_new_entries(){
-        if(state == NodeState.LEADER || state == NodeState.CANDIDATE) return;
-
-        node.currentTerm = 2;
-        long leaderTerm = 3;
+    public void revert_to_follower_if_append_entries_received_from_new_leader(){
+        if(state == FOLLOWER) return;
+        node.currentTerm = 1;
+        long leaderTerm = 2;
         long leaderCommit = 3;
         long prevLogIndex = 3;
         long prevLogTerm = 2;
 
-        LogEntry conflictingEntry = new LogEntry(2, new Set(2));
+        AppendEntries appendEntries = AppendEntries.heartbeat(leaderTerm, prevLogIndex, prevLogTerm, leaderCommit, leaderId);
+        AppendEntriesEvent expectedAppendEntriesEvent = new AppendEntriesEvent(appendEntries, channel);
+        state.handle(expectedAppendEntriesEvent);
 
-        node.log.add(new LogEntry(1, new Set(5)), 1);
-        node.log.add(new LogEntry(2, new Add(1)), 2);
-        node.log.add(new LogEntry(2, new Set(3)), 3);
-        node.log.add(conflictingEntry, 4);
-        node.log.add(new LogEntry(2, new Add(1)), 5);
+        StateTransitionEvent event = userEventCapture.get(0);
+        AppendEntriesEvent appendEntriesEvent = userEventCapture.get(1);
 
-        List<byte[]> entries = new ArrayList<>();
-        entries.add(new LogEntry(3, new Add(3)).serialize());
+        assertEquals(new StateTransitionEvent(state, FOLLOWER, node.id), event);
+        assertEquals(expectedAppendEntriesEvent, appendEntriesEvent);
+        assertEquals(FOLLOWER, node.state);
+    }
 
-        AppendEntries appendEntries = new AppendEntries(leaderTerm, prevLogIndex, prevLogTerm, leaderCommit, leaderId, entries);
+    @Test
+    public void revert_to_follower_if_request_vote_received_with_higher_term(){
+        if(state == FOLLOWER) return;
+        node.currentTerm = 1;
 
-        state.handle(new AppendEntriesEvent(appendEntries, channel));
+        RequestVote requestVote = new RequestVote(2, 2, 2, leaderId);
+        RequestVoteEvent expected = new RequestVoteEvent(requestVote, channel);
 
-        assertEquals(4, node.log.size());
-        assertNotEquals(conflictingEntry, node.log.get(4)); // conflicting entry removed
-        assertEquals(new LogEntry(3, new Add(3)), node.log.lastEntry()); // and replaced with entry from leader
-        assertEquals(leaderCommit, node.commitIndex);
+        state.handle(expected);
 
-        AppendEntriesReply expected = new AppendEntriesReply(leaderTerm, true);
-        AppendEntriesReply actual = channel.readOutbound();
+        StateTransitionEvent event = userEventCapture.get(0);
+        RequestVoteEvent actual = userEventCapture.get(1);
 
+        assertEquals(new StateTransitionEvent(state, FOLLOWER, node.id), event);
         assertEquals(expected, actual);
+        assertEquals(FOLLOWER, node.state);
     }
 
     public abstract NodeState initializeState();

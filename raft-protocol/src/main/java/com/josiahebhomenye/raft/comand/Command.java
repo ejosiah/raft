@@ -7,8 +7,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 
 import java.io.*;
+import java.util.Objects;
 
-@EqualsAndHashCode
 @RequiredArgsConstructor
 public abstract class Command {
 
@@ -46,5 +46,28 @@ public abstract class Command {
             case DIVIDE: return new Divide(in.readInt());
             default: throw new IllegalArgumentException("unable to create command from bytes");
         }
+    }
+
+    public String name(){
+        return this.getClass().getSimpleName();
+    }
+
+    @Override
+    public String toString() {
+        return String.format("%s(%s)", name(), value);
+    }
+
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Command)) return false;
+        Command command = (Command) o;
+        return value == command.value && this.id() == ((Command) o).id();
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(value, id());
     }
 }

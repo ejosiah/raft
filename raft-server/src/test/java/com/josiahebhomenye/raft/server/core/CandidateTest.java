@@ -21,10 +21,7 @@ public class CandidateTest extends NodeStateTest {
 
     @Before
     public void setup(){
-        node.activePeers.put(new InetSocketAddress("localhost", 9000), new Peer(null, null, null));
-        node.activePeers.put(new InetSocketAddress("localhost", 9001), new Peer(null, null, null));
-        node.activePeers.put(new InetSocketAddress("localhost", 9002), new Peer(null, null, null));
-        node.activePeers.put(new InetSocketAddress("localhost", 9003), new Peer(null, null, null));
+        peers.forEach(peer -> node.handle(new PeerConnectedEvent(peer)));
     }
 
     @Override
@@ -79,26 +76,6 @@ public class CandidateTest extends NodeStateTest {
     }
 
     @Test
-    public void revert_to_follower_if_append_entries_received_from_new_leader(){
-        node.currentTerm = 1;
-        long leaderTerm = 2;
-        long leaderCommit = 3;
-        long prevLogIndex = 3;
-        long prevLogTerm = 2;
-
-        AppendEntries appendEntries = AppendEntries.heartbeat(leaderTerm, prevLogIndex, prevLogTerm, leaderCommit, leaderId);
-        AppendEntriesEvent expectedAppendEntriesEvent = new AppendEntriesEvent(appendEntries, channel);
-        candidate.handle(expectedAppendEntriesEvent);
-
-        StateTransitionEvent event = userEventCapture.get(0);
-        AppendEntriesEvent appendEntriesEvent = userEventCapture.get(1);
-
-        assertEquals(new StateTransitionEvent(CANDIDATE, FOLLOWER, node.id), event);
-        assertEquals(expectedAppendEntriesEvent, appendEntriesEvent);
-        assertEquals(FOLLOWER, node.state);
-    }
-
-    @Test
     public void stay_as_candidate_if_append_entries_term_is_less_then_current_term(){
         node.currentTerm = 2;
         long leaderTerm = 1;
@@ -108,10 +85,17 @@ public class CandidateTest extends NodeStateTest {
 
         AppendEntries appendEntries = AppendEntries.heartbeat(leaderTerm, prevLogIndex, prevLogTerm, leaderCommit, leaderId);
         AppendEntriesEvent expectedAppendEntriesEvent = new AppendEntriesEvent(appendEntries, channel);
+
+
         candidate.handle(expectedAppendEntriesEvent);
 
         assertEquals(0, userEventCapture.captured());
         assertEquals(CANDIDATE, node.state);
+
+        AppendEntriesReply expected = new AppendEntriesReply(2, false);
+        AppendEntriesReply actual = channel.readOutbound();
+
+        assertEquals(expected, actual);
     }
 
     @Test
@@ -134,6 +118,5 @@ public class CandidateTest extends NodeStateTest {
 
         assertTrue(event.timeout() >= 150 && event.timeout() <= 300);
         assertEquals(new RequestVote(2L, 0, 0, node.id), requestVoteEvent.requestVote());
-
     }
 }

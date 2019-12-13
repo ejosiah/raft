@@ -3,6 +3,9 @@ package com.josiahebhomenye.raft.server.support;
 import com.josiahebhomenye.raft.server.core.Interceptor;
 import com.josiahebhomenye.raft.server.core.Node;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import lombok.AllArgsConstructor;
 import lombok.Setter;
 
@@ -25,5 +28,16 @@ public class NodeWaitLatch extends Interceptor {
             nodeWaitLatch.await();
         }
         ctx.fireUserEventTriggered(evt);
+    }
+
+    @Override
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        promise.addListener(f -> {
+           if(trigger.test(node, msg)){
+               testWaitLatch.countDown();
+               nodeWaitLatch.await();
+           }
+        });
+        super.write(ctx, msg, promise);
     }
 }

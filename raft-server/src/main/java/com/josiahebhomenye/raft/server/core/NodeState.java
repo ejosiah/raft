@@ -3,6 +3,7 @@ package com.josiahebhomenye.raft.server.core;
 import com.josiahebhomenye.raft.AppendEntriesReply;
 import com.josiahebhomenye.raft.server.event.*;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -29,52 +30,32 @@ public abstract class NodeState {
         this.node = node;
     }
 
-    public void handle(AppendEntriesEvent event){
-        node.trigger(new ScheduleTimeoutEvent(node.id, node.nextTimeout()));
-        if(event.msg().getTerm() < node.currentTerm){
+    public void handle(AppendEntriesEvent event) {
+        if(event.msg().getTerm() >= node.currentTerm) {
+            transitionTo(FOLLOWER);
+            node.trigger(event);
+        }else{
             event.sender().writeAndFlush(new AppendEntriesReply(node.currentTerm, false));
-            return;
         }
-
-        if(!node.log.isEmpty()) {
-            LogEntry prevEntry = node.log.get(event.msg().getPrevLogIndex());
-            if (prevEntry.getTerm() != event.msg().getPrevLogTerm()) {
-                event.sender().writeAndFlush(new AppendEntriesReply(node.currentTerm, false));
-                return;
-            }
-        }
-
-        if(!event.msg().getEntries().isEmpty()) {
-            List<LogEntry> entries = event.msg().getEntries().stream().map(LogEntry::deserialize).collect(Collectors.toList());
-
-            long nexEntryIndex = event.msg().getPrevLogIndex() + 1L;
-            if (node.log.size() >= nexEntryIndex) {
-                LogEntry entry = node.log.get(nexEntryIndex);
-                if (entry.getTerm() != entries.get(0).getTerm()){
-                    node.log.deleteFromIndex(nexEntryIndex);
-                }
-            }
-            IntStream.range(0, entries.size()).forEach(i -> node.log.add(entries.get(i), nexEntryIndex + i));
-        }
-        node.currentTerm = event.msg().getTerm();
-        if(event.msg().getLeaderCommit() > node.commitIndex){
-            node.commitIndex = Math.min(event.msg().getLeaderCommit(), node.log.getLastIndex());
-            if(this != FOLLOWER){
-                transitionTo(FOLLOWER);
-            }
-        }
-        event.sender().writeAndFlush(new AppendEntriesReply(node.currentTerm, true));
     }
 
     public void init(){}
 
     public void handle(ElectionTimeoutEvent event){}
 
-    public void handle(RequestVoteEvent event){}
+    public void handle(RequestVoteEvent event){
+        if(event.requestVote().getTerm() > node.currentTerm){
+            node.currentTerm = event.requestVote().getTerm();
+            transitionTo(FOLLOWER);
+            node.trigger(event);
+        }
+    }
 
     public void handle(RequestVoteReplyEvent event){}
 
     public void handle(HeartbeatTimeoutEvent heartbeatTimeoutEvent){}
+
+    public void handle(ReceivedCommandEvent event){};
 
     public String name(){
         return this.getClass().getSimpleName();
@@ -83,5 +64,9 @@ public abstract class NodeState {
     @Override
     public String toString() {
         return name();
+    }
+
+    public void handle(AppendEntriesReplyEvent event){
+
     }
 }

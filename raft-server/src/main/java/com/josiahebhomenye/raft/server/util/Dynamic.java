@@ -26,14 +26,14 @@ public class Dynamic {
             Class<?>[] params = new Class[args.length];
             IntStream.range(0, args.length).forEach(i -> params[i] = args[i].getClass());
             method = clazz.getMethod(methodName, params);
-            log.debug("invoking {}.{}({})", target.getClass().getSimpleName(), methodName, Arrays.toString(args));
+            log.debug("invoking {}.{}({})", target, methodName, Arrays.toString(args));
             Object resp = method.invoke(target, args);
             return (resp == null ? Optional.of((T)Void.instance) : Optional.of((T)resp));
         }catch (NoSuchMethodException ex){
-            log.debug("method {}({}) not found on target {}", methodName, Arrays.toString(args), target.getClass().getSimpleName());
+            log.debug("method {}({}) not found on target {}", methodName, Arrays.toString(args), target);
             return Optional.empty();
         }catch (Exception ex){
-            log.warn("exception encountered trying to invoke {}.{}({}}", target.getClass().getSimpleName(), methodName, Arrays.toString(args));
+            log.warn("exception encountered trying to invoke {}.{}({}}", target, methodName, Arrays.toString(args));
             throw ex;
         }
     }

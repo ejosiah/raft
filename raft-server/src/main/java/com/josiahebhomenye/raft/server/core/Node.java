@@ -2,9 +2,9 @@ package com.josiahebhomenye.raft.server.core;
 
 
 import com.josiahebhomenye.raft.AppendEntries;
-import com.josiahebhomenye.raft.AppendEntriesReply;
-import com.josiahebhomenye.raft.RequestVoteReply;
-import com.josiahebhomenye.raft.server.config.ElectionTimeout;
+import com.josiahebhomenye.raft.RequestVote;
+import com.josiahebhomenye.raft.comand.Command;
+import com.josiahebhomenye.raft.comand.Data;
 import com.josiahebhomenye.raft.server.config.ServerConfig;
 import com.josiahebhomenye.raft.server.event.*;
 import com.josiahebhomenye.raft.server.handlers.ServerChannelInitializer;
@@ -37,8 +37,6 @@ public class Node extends ChannelDuplexHandler {
     long lastApplied;
     InetSocketAddress votedFor;
     Log log;
-    long[] nextIndex;
-    long[] matchIndex;
     List<Peer> peers;
     Map<InetSocketAddress, Peer> activePeers;
     Channel channel;
@@ -46,10 +44,12 @@ public class Node extends ChannelDuplexHandler {
     EventLoopGroup group;
     EventLoopGroup clientGroup;
     ServerConfig config;
-    Instant lastheartbeat;
+    Instant lastHeartbeat;
     InetSocketAddress id;
+    InetSocketAddress leaderId;
     int votes;
     ScheduledFuture<?> scheduledElectionTimeout;
+    Data data = new Data(0);
 
     List<ChannelDuplexHandler> preProcessInterceptors = new ArrayList<>();
     List<ChannelDuplexHandler> postProcessInterceptors = new ArrayList<>();
@@ -132,7 +132,6 @@ public class Node extends ChannelDuplexHandler {
     }
 
     public void handle(AppendEntriesEvent event){
-        lastheartbeat = Instant.now();
         state.handle(event);
     }
 
@@ -146,7 +145,7 @@ public class Node extends ChannelDuplexHandler {
 
     public void handle(ScheduleTimeoutEvent event){
         if(cancelElectionTimeOut()) {
-            scheduledElectionTimeout = group.schedule(() -> trigger(new ElectionTimeoutEvent(lastheartbeat, id))
+            scheduledElectionTimeout = group.schedule(() -> trigger(new ElectionTimeoutEvent(lastHeartbeat, id))
                     , event.timeout(), TimeUnit.MILLISECONDS);
         }
     }
@@ -168,7 +167,27 @@ public class Node extends ChannelDuplexHandler {
         state.handle(event);
     }
 
+    public void handle(ReceivedCommandEvent event){
+        state.handle(event);
+    }
+
+    public void handle(CommitEvent event){
+        commitIndex = event.index();
+        updateState();
+    }
+
+    public void updateState(){
+        while(commitIndex > lastApplied){
+            lastApplied++;
+            Command command = log.get(lastApplied).getCommand();
+            command.apply(data);
+        }
+    }
+
     public void handle(PeerConnectedEvent event){
+        Peer peer = event.peer();
+        peer.nextIndex = log.getLastIndex() + 1;
+        peer.matchIndex = 0;
         activePeers.put(event.peer().id, event.peer());
     }
 
@@ -186,7 +205,7 @@ public class Node extends ChannelDuplexHandler {
     }
 
     public long prevLogTerm(){
-        return log.isEmpty() ? 0 : log.get(log.getLastIndex() - 1).getTerm();
+        return log.isEmpty() || log.size() == 1 ? 0 : log.get(log.getLastIndex() - 1).getTerm();
     }
 
     public long nextHeartbeatTimeout() {
@@ -204,7 +223,35 @@ public class Node extends ChannelDuplexHandler {
     }
 
     public boolean receivedHeartbeatSinceLast(Instant heartbeat){
-        return lastheartbeat != null  && heartbeat.isBefore(lastheartbeat);
+        return lastHeartbeat != null  && heartbeat.isBefore(lastHeartbeat);
+    }
+
+    public void add(Command command) {
+        log.add(new LogEntry(currentTerm, command), ++lastApplied);
+    }
+
+    public void replicate() {
+        // TODO set a timer and then replicate
+
+        long lastLogIndex = log.getLastIndex();
+        AppendEntries msg = AppendEntries.heartbeat(currentTerm, prevLogIndex(), prevLogTerm(), commitIndex, id);
+        activePeers.values().forEach(peer -> {
+            long nextIndex = peer.nextIndex;
+            if(lastLogIndex >= nextIndex){
+                List<byte[]> entries = logEntriesFrom(nextIndex);
+                peer.send(msg.withEntries(entries));
+            }
+        });
+    }
+    
+    protected void sendAppendEntriesTo(Peer peer, long index){
+        List<byte[]> entries = logEntriesFrom(peer.nextIndex);
+        AppendEntries msg = new AppendEntries(currentTerm, prevLogIndex(), prevLogTerm(), commitIndex, id, entries);
+        peer.send(msg);
+    }
+    
+    protected List<byte[]> logEntriesFrom(long index){
+        return log.entriesFrom(index).stream().map(LogEntry::serialize).collect(Collectors.toList());
     }
 
     public class ChildHandler extends ChannelDuplexHandler{
@@ -213,11 +260,18 @@ public class Node extends ChannelDuplexHandler {
             if(Node.this.stopped()) return;
             if(msg instanceof AppendEntries){
                 Node.this.trigger(new AppendEntriesEvent((AppendEntries)msg, ctx.channel()));
+            }else if(msg instanceof RequestVote){
+                Node.this.trigger(new RequestVoteEvent((RequestVote)msg, ctx.channel()));
             }
         }
     }
 
     private boolean stopped() {
         return group.isShutdown();
+    }
+
+    @Override
+    public String toString() {
+        return String.format("Node{id: %s, state: %s]", id, state);
     }
 }

@@ -74,6 +74,11 @@ public class Peer {
         }
     }
 
+    public Peer set(Channel channel){
+        this.channel = channel;
+        return this;
+    }
+
     @Override
     public String toString() {
         return String.format("Peer[%s]", id);

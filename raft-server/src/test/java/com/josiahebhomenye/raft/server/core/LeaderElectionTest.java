@@ -153,7 +153,6 @@ public class LeaderElectionTest {
         testLatch.await(10, TimeUnit.SECONDS);
 
         assertEquals(1L, node.currentTerm);
-        assertEquals(node.id, node.votedFor);
         assertEquals(FOLLOWER, node.state);
 
         assertEquals(new StateTransitionEvent(NULL_STATE, FOLLOWER, node.id), userEventCapture.get(0));
@@ -163,5 +162,32 @@ public class LeaderElectionTest {
         assertTrue(userEventCapture.get(4) instanceof ScheduleTimeoutEvent);
         assertEquals(new SendRequestVoteEvent(new RequestVote(1L, 0, 0, node.id)), userEventCapture.get(5));
         assertEquals(new StateTransitionEvent(CANDIDATE, FOLLOWER, node.id), userEventCapture.get(6));
+    }
+
+    @Test
+    @SneakyThrows
+    public void grant_vote_received_request_vote_from_another_candidate_with_higher_term(){
+        RemotePeerMock mockPeer = peers.get(0);
+        mockPeer.whenRequestVote((ctx, msg) ->  mockPeer.send(msg.withTerm(msg.getTerm()+1).withCandidateId(mockPeer.address)) );
+        mockPeer.whenRequestVoteReply((ctx, msg) -> testLatch.countDown());
+
+        node = new Node(config);
+        node.addPreProcessInterceptors(new PreElectionSetup(peers));
+        node.addPreProcessInterceptors(userEventCapture);
+
+        RequestVoteReply expectedMsg = new RequestVoteReply(2, true);
+
+//        node.addPostProcessInterceptors(new NodeWaitLatch(testLatch, nodeLatch, (Node, obj) -> {
+//            return expectedMsg.equals(obj);
+//        }));  TODO add interceptors to peers
+
+        node.start();
+
+        testLatch.await(10, TimeUnit.SECONDS);
+
+        assertEquals(2L, node.currentTerm);
+        assertEquals(FOLLOWER, node.state);
+
+        mockPeer.verifyMessageReceived(expectedMsg);
     }
 }

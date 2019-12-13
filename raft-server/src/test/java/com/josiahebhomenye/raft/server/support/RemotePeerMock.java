@@ -2,6 +2,7 @@ package com.josiahebhomenye.raft.server.support;
 
 import com.josiahebhomenye.raft.AppendEntries;
 import com.josiahebhomenye.raft.RequestVote;
+import com.josiahebhomenye.raft.RequestVoteReply;
 import com.josiahebhomenye.raft.server.handlers.ProtocolInitializer;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
@@ -16,16 +17,13 @@ import org.slf4j.LoggerFactory;
 
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
 @RequiredArgsConstructor
 public class RemotePeerMock {
@@ -40,12 +38,14 @@ public class RemotePeerMock {
     private static final Logger logger = LoggerFactory.getLogger("RemotePeerMock");
     private ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private List<ScheduledFuture<?>> scheduled = new ArrayList<>();
+    public List<Object> receivedMessages = new ArrayList<>();
 
     @ChannelHandler.Sharable
     private class MessageHandler extends ChannelDuplexHandler {
 
         BiConsumer<ChannelHandlerContext, AppendEntries> onAppendEntries = (ctx, obj) -> {};
         BiConsumer<ChannelHandlerContext, RequestVote> onRequestVote = (ctx, obj) -> {};
+        BiConsumer<ChannelHandlerContext, RequestVoteReply> onRequestVoteReply = (ctx, obj) -> {};
 
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
@@ -54,10 +54,12 @@ public class RemotePeerMock {
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            if(onAppendEntries != null || onRequestVote != null) {
+            RemotePeerMock.this.receivedMessages.add(msg);
+            if(onAppendEntries != null || onRequestVote != null || onRequestVoteReply != null) {
                 RemotePeerMock.logger.info("remote peer {} handling message {} from node {}", address, msg, ctx.channel().remoteAddress());
                 if (msg instanceof AppendEntries) onAppendEntries.accept(ctx, (AppendEntries) msg);
                 else if (msg instanceof RequestVote) onRequestVote.accept(ctx, (RequestVote) msg);
+                else if (msg instanceof RequestVoteReply) onRequestVoteReply.accept(ctx, (RequestVoteReply) msg);
             }
         }
 
@@ -73,6 +75,14 @@ public class RemotePeerMock {
 
     public void whenRequestVote(BiConsumer<ChannelHandlerContext, RequestVote> action){
         handler.onRequestVote = action;
+    }
+
+    public void whenRequestVoteReply(BiConsumer<ChannelHandlerContext, RequestVoteReply> action){
+        handler.onRequestVoteReply = action;
+    }
+
+    public void verifyMessageReceived(Object msg){
+        if(!receivedMessages.contains(msg)) throw new RuntimeException(String.format("mock[%s] did not receive message [%s]", address, msg));
     }
 
     public void reset(){

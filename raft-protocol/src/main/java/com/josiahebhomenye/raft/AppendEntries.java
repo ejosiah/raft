@@ -26,6 +26,7 @@ public class AppendEntries {
         return new AppendEntries(term, prevLogIndex, prevLogTerm, leaderCommit, leaderId, Collections.emptyList());
     }
 
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

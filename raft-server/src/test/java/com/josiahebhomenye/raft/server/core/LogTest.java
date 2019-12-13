@@ -105,4 +105,15 @@ public class LogTest {
         assertEquals(logEntries.size(), log.size());
         IntStream.range(0, logEntries.size()).forEach(i -> assertEquals( logEntries.get(i), log.get(i+1)) );
     }
+
+    @Test
+    public void retrieve_entries_from_a_giving_index(){
+        Log log = new Log("log.dat");
+        IntStream.range(0, logEntries.size()).forEach(i -> log.add(logEntries.get(i), i+1));
+
+        List<LogEntry> expected = logEntries.stream().skip(2).collect(Collectors.toList());
+        List<LogEntry> actual = log.entriesFrom(3);
+
+        assertEquals(expected, actual);
+    }
 }

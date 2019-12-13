@@ -1,19 +1,15 @@
 package com.josiahebhomenye.raft.server.core;
 
-import com.josiahebhomenye.raft.RequestVote;
-import com.josiahebhomenye.raft.RequestVoteReply;
-import com.josiahebhomenye.raft.comand.Add;
-import com.josiahebhomenye.raft.comand.Multiply;
-import com.josiahebhomenye.raft.comand.Set;
-import com.josiahebhomenye.raft.comand.Subtract;
-import com.josiahebhomenye.raft.server.event.ElectionTimeoutEvent;
-import com.josiahebhomenye.raft.server.event.RequestVoteEvent;
-import com.josiahebhomenye.raft.server.event.ScheduleTimeoutEvent;
+import com.josiahebhomenye.raft.*;
+import com.josiahebhomenye.raft.comand.*;
+import com.josiahebhomenye.raft.server.event.*;
 import lombok.SneakyThrows;
 import org.junit.Test;
 import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.Assert.*;
 
@@ -29,6 +25,76 @@ public class FollowerTest extends NodeStateTest{
     }
 
     @Test
+    public void reply_false_to_append_entry_message_if_leaders_term_is_behind(){
+        node.currentTerm = 2;
+        AppendEntries entries = AppendEntries.heartbeat(node.currentTerm - 1, 0, 0, 0, leaderId);
+
+        follower.handle(new AppendEntriesEvent(entries, channel));
+
+        AppendEntriesReply expected = new AppendEntriesReply(2, false);
+        AppendEntriesReply actual = channel.readOutbound();
+
+        assertEquals(expected, actual);
+
+    }
+
+    @Test
+    public void reply_false_to_append_entry_message_if_log_does_not_contain_an_entry_with_previous_log_term(){
+        node.currentTerm = 4;
+
+        node.log.add(new LogEntry(1, new Set(5)), 1);
+        node.log.add(new LogEntry(2, new Add(1)), 2);
+        node.log.add(new LogEntry(2, new Set(3)), 3);
+        node.log.add(new LogEntry(3, new Set(2)), 4);
+
+        AppendEntries entries = AppendEntries.heartbeat(node.currentTerm, 3, 3, 0, leaderId);
+
+        follower.handle(new AppendEntriesEvent(entries, channel));
+
+        AppendEntriesReply expected = new AppendEntriesReply(node.currentTerm, false);
+        AppendEntriesReply actual = channel.readOutbound();
+
+        assertEquals(expected, actual);
+    }
+
+    @Test
+    public void delete_exiting_entries_that_conflict_with_new_entries(){
+        node.currentTerm = 2;
+        long leaderTerm = 3;
+        long leaderCommit = 3;
+        long prevLogIndex = 3;
+        long prevLogTerm = 2;
+
+        LogEntry conflictingEntry = new LogEntry(2, new Set(2));
+
+        node.log.add(new LogEntry(1, new Set(5)), 1);
+        node.log.add(new LogEntry(2, new Add(1)), 2);
+        node.log.add(new LogEntry(2, new Set(3)), 3);
+        node.log.add(conflictingEntry, 4);
+        node.log.add(new LogEntry(2, new Add(1)), 5);
+
+        List<byte[]> entries = new ArrayList<>();
+        entries.add(new LogEntry(3, new Add(3)).serialize());
+
+        AppendEntries appendEntries = new AppendEntries(leaderTerm, prevLogIndex, prevLogTerm, leaderCommit, leaderId, entries);
+
+        follower.handle(new AppendEntriesEvent(appendEntries, channel));
+
+        assertEquals(4, node.log.size());
+        assertNotEquals(conflictingEntry, node.log.get(4)); // conflicting entry removed
+        assertEquals(new LogEntry(3, new Add(3)), node.log.lastEntry()); // and replaced with entry from leader
+
+        CommitEvent expectedCommitEvent = new CommitEvent(leaderCommit, node.id);
+
+        assertEquals(expectedCommitEvent, userEventCapture.get(1));
+
+        AppendEntriesReply expected = new AppendEntriesReply(leaderTerm, true);
+        AppendEntriesReply actual = channel.readOutbound();
+
+        assertEquals(expected, actual);
+    }
+
+    @Test
     public void initialization_should_schedule_election_timeout() throws Exception{
         follower.init();
 
@@ -41,7 +107,7 @@ public class FollowerTest extends NodeStateTest{
     @Test
     public void follower_should_transition_to_candidate_when_no_heartbeat_received_before_election_timeout(){
         Instant lastHeartbeat = Instant.now().minus(Duration.ofMinutes(5));
-        node.lastheartbeat = lastHeartbeat;
+        node.lastHeartbeat = lastHeartbeat;
         follower.handle(new ElectionTimeoutEvent(lastHeartbeat, node.id));
 
         assertEquals(node.state, NodeState.CANDIDATE);
@@ -49,7 +115,7 @@ public class FollowerTest extends NodeStateTest{
 
     @Test
     public void follower_should_transition_to_candidate_on_last_heartbeat_is_not_set(){
-        node.lastheartbeat = null;
+        node.lastHeartbeat = null;
         follower.handle(new ElectionTimeoutEvent(null, node.id));
 
         assertEquals(node.state, NodeState.CANDIDATE);
@@ -58,8 +124,8 @@ public class FollowerTest extends NodeStateTest{
     @Test
     @SneakyThrows
     public void follower_should_schedule_a_new_election_time_when_heartbeat_received_after_election_timeout(){
-        node.lastheartbeat = Instant.now();
-        Instant lastHeartbeat = node.lastheartbeat.minusMillis(1000);
+        node.lastHeartbeat = Instant.now();
+        Instant lastHeartbeat = node.lastHeartbeat.minusMillis(1000);
 
         follower.handle(new ElectionTimeoutEvent(lastHeartbeat, node.id));
 
@@ -174,5 +240,21 @@ public class FollowerTest extends NodeStateTest{
         RequestVoteReply reply = channel.readOutbound();
         assertEquals(new RequestVoteReply(node.currentTerm, true), reply);
         assertEquals(node.state, NodeState.FOLLOWER);
+    }
+
+    @Test
+    @SneakyThrows
+    public void redirect_client_command_to_leader(){
+        node.currentTerm = 1;
+        node.leaderId = leaderId;
+
+        Command command = new Set(5);
+        ReceivedCommandEvent event = new ReceivedCommandEvent(command, channel);
+
+        follower.handle(event);
+
+        RedirectCommand reply = channel.readOutbound();
+
+        assertEquals(new RedirectCommand(leaderId, command), reply);
     }
 }
