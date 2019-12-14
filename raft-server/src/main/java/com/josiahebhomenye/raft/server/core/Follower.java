@@ -16,6 +16,7 @@ public class Follower extends NodeState {
     protected Follower(){}
 
     public void init() {
+        super.init();
         node.votes = 0;
         node.votedFor = null;
         node.trigger(new ScheduleTimeoutEvent(node.id, node.nextTimeout()));

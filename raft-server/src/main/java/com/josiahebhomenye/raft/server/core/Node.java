@@ -24,6 +24,9 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -49,8 +52,8 @@ public class Node extends ChannelDuplexHandler {
     int votes;
     ScheduledFuture<?> scheduledElectionTimeout;
     Data data = new Data(0);
-    EventLoopGroup heartbeatGenerator;
-    ScheduledFuture<?> scheduledHeartbeat;
+    ScheduledExecutorService heartbeatGenerator;
+    java.util.concurrent.ScheduledFuture scheduledHeartbeat;
 
     List<ChannelDuplexHandler> preProcessInterceptors = new ArrayList<>();
     List<ChannelDuplexHandler> postProcessInterceptors = new ArrayList<>();
@@ -63,7 +66,7 @@ public class Node extends ChannelDuplexHandler {
         this.activePeers = new HashMap<>();
         this.peers = new ArrayList<>();
         votes = 0;
-        heartbeatGenerator = new DefaultEventLoop();
+        heartbeatGenerator = Executors.newSingleThreadScheduledExecutor();
         initStateData();
     }
 

@@ -7,6 +7,7 @@ public class Candidate extends NodeState {
 
     @Override
     public void init() {
+        super.init();
         node.currentTerm++;
         node.votedFor = node.id;
         node.votes = 1;

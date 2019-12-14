@@ -40,7 +40,12 @@ public abstract class NodeState {
         }
     }
 
-    public void init(){}
+    public void init(){
+        if(node.scheduledHeartbeat != null){
+            node.scheduledHeartbeat.cancel(true);
+            node.scheduledHeartbeat = null;
+        }
+    }
 
     public void handle(ElectionTimeoutEvent event){}
 
