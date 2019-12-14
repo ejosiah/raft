@@ -38,11 +38,11 @@ public class LogReplicationTest {
     }
 
     void buildLogEntries(){
-        Log leaderLog = new Log("log.dat");
-        Log follower0Log = new Log("log0.dat");
-        Log follower1Log = new Log("log1.dat");
-        Log follower2Log = new Log("log2.dat");
-        Log follower3Log = new Log("log3.dat");
+        Log leaderLog = new Log("log.dat").clear();
+        Log follower0Log = new Log("log0.dat").clear();
+        Log follower1Log = new Log("log1.dat").clear();
+        Log follower2Log = new Log("log2.dat").clear();
+        Log follower3Log = new Log("log3.dat").clear();
 
         leaderLog.add(new LogEntry(1, new Set(3)), 1);
         leaderLog.add(new LogEntry(1, new Set(1)), 2);
@@ -137,11 +137,11 @@ public class LogReplicationTest {
 
     @After
     public void tearDown(){
-        leader.stop();
         follower0.stop();
         follower1.stop();
         follower2.stop();
         follower3.stop();
+        leader.stop();
     }
 
     @Test
@@ -156,16 +156,16 @@ public class LogReplicationTest {
         Thread.sleep(1000);
 
         follower0.start();
-//        follower1.start();
-//        follower2.start();
-//        follower3.start();
+        follower1.start();
+        follower2.start();
+        follower3.start();
 
-        Thread.sleep(1000);
+        Thread.sleep(3000);    // TODO use latch instead
 
         assertEquals(leader.log, follower0.log);
-//        assertEquals(leader.log, follower1.log);
-//        assertEquals(leader.log, follower2.log);
-//        assertEquals(leader.log, follower3.log);
+        assertEquals(leader.log, follower1.log);
+        assertEquals(leader.log, follower2.log);
+        assertEquals(leader.log, follower3.log);
     }
 
 }

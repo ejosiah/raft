@@ -58,7 +58,7 @@ public class Peer {
             promise.addListener(f ->{
                 if(f.isSuccess()){
                     Peer.this.channel = ctx.channel();
-                    serverChannel.pipeline().fireUserEventTriggered(new PeerConnectedEvent(Peer.this));
+                    serverChannel.pipeline().fireUserEventTriggered(new PeerConnectedEvent(Peer.this));  // TODO trigger from node instead
                 }
             });
             super.connect(ctx, remoteAddress, localAddress, promise);

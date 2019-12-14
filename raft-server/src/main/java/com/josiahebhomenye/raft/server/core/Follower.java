@@ -31,7 +31,7 @@ public class Follower extends NodeState {
 
         if(!node.log.isEmpty()) {
             LogEntry prevEntry = node.log.get(event.msg().getPrevLogIndex());
-            if (prevEntry != null && prevEntry.getTerm() != event.msg().getPrevLogTerm()) {
+            if (prevEntry == null || prevEntry.getTerm() != event.msg().getPrevLogTerm()) {
                 event.sender().writeAndFlush(new AppendEntriesReply(node.currentTerm, false));
                 return;
             }

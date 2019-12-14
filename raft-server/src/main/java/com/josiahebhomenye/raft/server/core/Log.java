@@ -32,9 +32,7 @@ public class Log {
 
     @SneakyThrows
     public LogEntry get(long index){
-        if(index > size()) return null;
-        if(index < 1) throw new IllegalArgumentException("index: " + index + ", cannot less than one");
-
+        if(index < 1 || index > size()) return null;
         byte[] buff = new byte[SIZE_OFFSET];
         data.seek(pos(index));
         data.read(buff);
@@ -68,8 +66,9 @@ public class Log {
     }
 
     @SneakyThrows
-    public void clear(){
+    public Log clear(){
         data.setLength(0);
+        return this;
     }
 
     public long size() {
@@ -103,8 +102,8 @@ public class Log {
         if (this == o) return true;
         if (!(o instanceof Log)) return false;
         Log log = (Log) o;
-        if(log.data.length() == 0) return false;
-        if(log.data.length() != data.length()) return false;
+        if(log.size() == 0) return false;
+        if(log.size() != this.size()) return false;
 
         long lenght = data.length();
         data.seek(0);

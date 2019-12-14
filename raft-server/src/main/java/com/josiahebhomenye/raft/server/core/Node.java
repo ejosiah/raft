@@ -256,7 +256,10 @@ public class Node extends ChannelDuplexHandler {
     
     protected void sendAppendEntriesTo(Peer peer, long index){
         List<byte[]> entries = logEntriesFrom(peer.nextIndex);
-        AppendEntries msg = new AppendEntries(currentTerm, prevLogIndex(), prevLogTerm(), commitIndex, id, entries);
+        LogEntry previousEntry = log.get(peer.nextIndex - 1);
+        long prevLogIndex = previousEntry != null ? peer.nextIndex - 1 : 0;
+        long prevLogTerm = previousEntry != null ? previousEntry.getTerm() : 0;
+        AppendEntries msg = new AppendEntries(currentTerm, prevLogIndex, prevLogTerm, commitIndex, id, entries);
         peer.send(msg);
     }
     
