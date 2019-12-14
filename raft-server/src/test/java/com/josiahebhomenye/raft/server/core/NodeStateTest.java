@@ -1,21 +1,16 @@
 package com.josiahebhomenye.raft.server.core;
 
 import com.josiahebhomenye.raft.AppendEntries;
-import com.josiahebhomenye.raft.AppendEntriesReply;
 import com.josiahebhomenye.raft.RequestVote;
-import com.josiahebhomenye.raft.comand.Add;
-import com.josiahebhomenye.raft.comand.Command;
-import com.josiahebhomenye.raft.comand.Set;
-import com.josiahebhomenye.raft.comand.Subtract;
+import com.josiahebhomenye.raft.server.config.ElectionTimeout;
 import com.josiahebhomenye.raft.server.config.ServerConfig;
-import com.josiahebhomenye.raft.server.event.AppendEntriesEvent;
-import com.josiahebhomenye.raft.server.event.RequestVoteEvent;
-import com.josiahebhomenye.raft.server.event.StateTransitionEvent;
+import com.josiahebhomenye.raft.server.event.*;
 import com.typesafe.config.ConfigFactory;
 import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
 import lombok.SneakyThrows;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -38,12 +33,13 @@ public abstract class NodeStateTest {
     Node node;
     InetSocketAddress leaderId;
     List<Peer> peers;
+    ServerConfig config = new ServerConfig(ConfigFactory.load());
 
     @Before
     @SneakyThrows
     public void setup0(){
         try {
-           // Files.delete(Paths.get("log.dat"));
+            Files.delete(Paths.get("log.dat"));
             Files.delete(Paths.get("state.dat"));
         } catch (NoSuchFileException e) {
             // ignore
@@ -66,10 +62,15 @@ public abstract class NodeStateTest {
         peers = new ArrayList<>();
 
 
-        peers.add(new Peer(new InetSocketAddress(9001), node.channel, null).set(channel));
-        peers.add(new Peer(new InetSocketAddress(9002), node.channel, null).set(channel));
-        peers.add(new Peer(new InetSocketAddress(9003), node.channel, null).set(channel));
-        peers.add(new Peer(new InetSocketAddress(9004), node.channel, null).set(channel));
+        peers.add(new Peer(new InetSocketAddress(9001), node, null).set(channel));
+        peers.add(new Peer(new InetSocketAddress(9002), node, null).set(channel));
+        peers.add(new Peer(new InetSocketAddress(9003), node, null).set(channel));
+        peers.add(new Peer(new InetSocketAddress(9004), node, null).set(channel));
+    }
+
+    @After
+    public void tearDown0(){
+        node.stop();
     }
 
     @Test
@@ -83,10 +84,11 @@ public abstract class NodeStateTest {
 
         AppendEntries appendEntries = AppendEntries.heartbeat(leaderTerm, prevLogIndex, prevLogTerm, leaderCommit, leaderId);
         AppendEntriesEvent expectedAppendEntriesEvent = new AppendEntriesEvent(appendEntries, channel);
+
         state.handle(expectedAppendEntriesEvent);
 
-        StateTransitionEvent event = userEventCapture.get(0);
-        AppendEntriesEvent appendEntriesEvent = userEventCapture.get(1);
+        StateTransitionEvent event = userEventCapture.get(StateTransitionEvent.class).get();
+        AppendEntriesEvent appendEntriesEvent = userEventCapture.get(AppendEntriesEvent.class).get();
 
         assertEquals(new StateTransitionEvent(state, FOLLOWER(), node.id), event);
         assertEquals(expectedAppendEntriesEvent, appendEntriesEvent);
@@ -103,12 +105,19 @@ public abstract class NodeStateTest {
 
         state.handle(expected);
 
-        StateTransitionEvent event = userEventCapture.get(0);
-        RequestVoteEvent actual = userEventCapture.get(1);
+        StateTransitionEvent event = userEventCapture.get(StateTransitionEvent.class).get();
+        RequestVoteEvent actual = userEventCapture.get(RequestVoteEvent.class).get();
 
         assertEquals(new StateTransitionEvent(state, FOLLOWER(), node.id), event);
         assertEquals(expected, actual);
         assertEquals(FOLLOWER(), node.state);
+    }
+
+    void assertElectionTimeout(ScheduleTimeoutEvent event){
+        long minElectionTimeout = ((ElectionTimeout)config.electionTimeout).lower().toMillis();
+        long maxElectionTimeout = ((ElectionTimeout)config.electionTimeout).upper().toMillis();
+
+        assertTrue(event.timeout() >= minElectionTimeout && event.timeout() <= maxElectionTimeout);
     }
 
     public abstract NodeState initializeState();

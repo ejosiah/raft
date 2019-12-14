@@ -1,14 +1,19 @@
 package com.josiahebhomenye.raft.server.event;
 
+import com.josiahebhomenye.raft.server.core.Peer;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-
-import java.net.InetSocketAddress;
+import lombok.experimental.Accessors;
 
 @Data
+@Accessors(fluent = true)
 @EqualsAndHashCode(callSuper=true)
 public class HeartbeatTimeoutEvent extends Event {
-    public HeartbeatTimeoutEvent(InetSocketAddress source) {
-        super(source);
+
+    private Peer peer;
+
+    public HeartbeatTimeoutEvent(Peer peer) {
+        super(peer.getId());
+        this.peer = peer;
     }
 }

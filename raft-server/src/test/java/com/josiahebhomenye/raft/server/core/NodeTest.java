@@ -1,12 +1,15 @@
 package com.josiahebhomenye.raft.server.core;
 
-import com.josiahebhomenye.raft.comand.Command;
 import com.josiahebhomenye.raft.comand.Set;
 import com.josiahebhomenye.raft.server.config.ServerConfig;
+import com.josiahebhomenye.raft.server.event.PeerConnectedEvent;
+import com.josiahebhomenye.raft.server.event.PeerDisconnectedEvent;
+import com.josiahebhomenye.raft.server.event.ConnectPeerEvent;
 import com.typesafe.config.ConfigFactory;
+import io.netty.channel.embedded.EmbeddedChannel;
 import lombok.SneakyThrows;
+import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.DataOutputStream;
@@ -16,27 +19,43 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
 import java.util.function.Supplier;
-
 import static org.junit.Assert.*;
 
 public class NodeTest {
 
+    Node node;
+    ServerConfig config;
+    EmbeddedChannel channel;
+
+    UserEventCapture userEventCapture;
 
     @Before
     @SneakyThrows
     public void setup(){
         try {
             Files.delete(Paths.get("state.dat"));
+            Files.delete(Paths.get("log.dat"));
         } catch (NoSuchFileException e) {
             // ignore
         }
-        new Log("log.dat").clear();
+        initializeNode();
+    }
+
+    @After
+    public void tearDown(){
+        node.stop();
+    }
+
+    private void initializeNode(){
+        userEventCapture = new UserEventCapture();
+        config = new ServerConfig(ConfigFactory.load());
+        node = new Node(config);
+        channel = new EmbeddedChannel(userEventCapture);
+        node.channel = channel;
     }
 
     @Test
     public void ensureInitialStateOnFirstBoot(){
-        ServerConfig config = new ServerConfig(ConfigFactory.load());
-        Node node = new Node(config);
         assertEquals(0, node.getCurrentTerm());
         assertNull(node.getVotedFor());
         assertEquals(NodeState.NULL_STATE(), node.getState());
@@ -48,7 +67,7 @@ public class NodeTest {
     public void ensuredStoredStateIsLoadedOnBoot(){
         Supplier<Void> createStateFile = () -> {
             try(DataOutputStream out = new DataOutputStream(new FileOutputStream("state.dat"))){
-                out.writeInt(1);
+                out.writeLong(1);
                 out.writeUTF("localhost");
                 out.writeInt(8080);
             }catch (Exception e){
@@ -58,10 +77,8 @@ public class NodeTest {
         };
 
         Supplier<Void> createLogFile = () -> {
-            try(DataOutputStream out = new DataOutputStream(new FileOutputStream("log.dat"))){
-                Command command = new Set(5);
-                out.writeInt(1);
-                out.write(command.serialize());
+            try(Log log = new Log("log.dat")){
+                log.add(new LogEntry(1, new Set(5)), 1);
             }catch (Exception e){
 
             }
@@ -69,11 +86,11 @@ public class NodeTest {
             return null;
         };
 
+
         createStateFile.get();
         createLogFile.get();
+        initializeNode();
 
-        ServerConfig config = new ServerConfig(ConfigFactory.load());
-        Node node = new Node(config);
         assertEquals(1, node.getCurrentTerm());
         assertEquals(NodeState.NULL_STATE(), node.getState());
         assertEquals(new InetSocketAddress("localhost", 8080), node.getVotedFor());
@@ -83,8 +100,31 @@ public class NodeTest {
     }
 
     @Test
-    @Ignore
-    public void should_reply_false_to_AppendEntries_when_term_is_less_than_currentTerm(){
-        fail("Not yet implemented!");
+    public void peer_added_to_active_peers_list_on_connection(){
+        assertTrue(node.activePeers.isEmpty());
+        node.handle(new PeerConnectedEvent(new Peer(new InetSocketAddress("localhost", 8080), node, null)));
+
+        assertEquals(1, node.activePeers.size());
     }
+
+    @Test
+    public void connection_should_be_retried_when_peer_gets_disconnected(){
+        Peer peer = new Peer(new InetSocketAddress("localhost", 8080), node, null);
+        peer.set(channel);
+
+        assertTrue(node.activePeers.isEmpty());
+
+        node.handle(new PeerConnectedEvent(peer));
+
+        assertEquals(1, node.activePeers.size());
+
+        node.handle(new PeerDisconnectedEvent(peer));
+
+        assertTrue(node.activePeers.isEmpty());
+
+        ConnectPeerEvent event = userEventCapture.get(0);
+        assertEquals(new ConnectPeerEvent(peer), event);
+
+    }
+
 }

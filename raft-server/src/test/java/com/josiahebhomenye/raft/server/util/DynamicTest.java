@@ -35,6 +35,15 @@ public class DynamicTest {
         assertEquals(Optional.empty(), res);
     }
 
+    @Test
+    public void fallback_to_method_with_superclass_param_when_supclass_param_giving(){
+        Optional<String> res = Dynamic.invoke(foo, "bar", new SubClassParam());
+        assertEquals(Optional.of("SubClassParam"), res);
+    }
+
+    class SuperClassParam{ }
+    class SubClassParam extends SuperClassParam{}
+
     class Foo {
 
         public String bar(String param){
@@ -48,5 +57,11 @@ public class DynamicTest {
         public String bar(){
             return "bar";
         }
+
+        public String bar(SuperClassParam param){
+            return param.getClass().getSimpleName();
+        }
     }
+
+
 }

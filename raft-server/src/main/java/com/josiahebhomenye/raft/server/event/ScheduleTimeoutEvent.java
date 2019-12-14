@@ -7,6 +7,7 @@ import lombok.experimental.Accessors;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.concurrent.TimeUnit;
 
 @Data
 @NoArgsConstructor
@@ -14,9 +15,15 @@ import java.net.SocketAddress;
 @EqualsAndHashCode(callSuper=false)
 public class ScheduleTimeoutEvent extends Event {
     private long timeout;
+    private TimeUnit unit;
 
     public ScheduleTimeoutEvent(SocketAddress source, long timeout){
+        this(source, timeout, TimeUnit.MILLISECONDS);
+    }
+
+    public ScheduleTimeoutEvent(SocketAddress source, long timeout, TimeUnit unit){
         super(source);
         this.timeout = timeout;
+        this.unit = unit;
     }
 }

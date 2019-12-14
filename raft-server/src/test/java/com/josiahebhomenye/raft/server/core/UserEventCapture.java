@@ -1,6 +1,9 @@
 package com.josiahebhomenye.raft.server.core;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.josiahebhomenye.raft.server.event.AppendEntriesEvent;
+import com.josiahebhomenye.raft.server.event.CancelHeartbeatTimeoutEvent;
+import com.josiahebhomenye.raft.server.event.StateTransitionEvent;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -8,6 +11,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 public class UserEventCapture extends ChannelDuplexHandler {
 
@@ -41,5 +45,17 @@ public class UserEventCapture extends ChannelDuplexHandler {
 
     public int captured(){
         return events.size();
+    }
+
+    @SuppressWarnings("unchecked")
+    public  <T> Optional<T> get(Class<T> eventClass) {
+        return events.stream().filter(e -> e.getClass() == eventClass).findFirst().map(e -> (T)e);
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> T get(Class<T> eventClass, int pos) {
+        if(events.size() <= pos) return null;
+        Object event = events.get(pos);
+        return event.getClass() == eventClass ? (T)event : null;
     }
 }

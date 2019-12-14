@@ -24,9 +24,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -52,8 +49,6 @@ public class Node extends ChannelDuplexHandler {
     int votes;
     ScheduledFuture<?> scheduledElectionTimeout;
     Data data = new Data(0);
-    ScheduledExecutorService heartbeatGenerator;
-    java.util.concurrent.ScheduledFuture scheduledHeartbeat;
 
     List<ChannelDuplexHandler> preProcessInterceptors = new ArrayList<>();
     List<ChannelDuplexHandler> postProcessInterceptors = new ArrayList<>();
@@ -66,7 +61,8 @@ public class Node extends ChannelDuplexHandler {
         this.activePeers = new HashMap<>();
         this.peers = new ArrayList<>();
         votes = 0;
-        heartbeatGenerator = Executors.newSingleThreadScheduledExecutor();
+        group = new NioEventLoopGroup();
+        clientGroup = new NioEventLoopGroup(3);
         initStateData();
     }
 
@@ -85,9 +81,6 @@ public class Node extends ChannelDuplexHandler {
 
     @SneakyThrows
     public void start(){
-        group = new NioEventLoopGroup();
-        clientGroup = new NioEventLoopGroup(10);
-
         ChannelFuture cf = new ServerBootstrap()
             .group(group, clientGroup)
             .channel(NioServerSocketChannel.class)
@@ -110,7 +103,7 @@ public class Node extends ChannelDuplexHandler {
         promise.addListener(f -> {
             if(f.isSuccess()){
                 channel = ctx.channel();
-                peers = config.peers.stream().map(id -> new Peer(id, channel, clientGroup)).collect(Collectors.toList());
+                peers = config.peers.stream().map(id -> new Peer(id, this, clientGroup)).collect(Collectors.toList());
                 peers.forEach(Peer::connect);
                 state.transitionTo(FOLLOWER());
             }
@@ -120,17 +113,16 @@ public class Node extends ChannelDuplexHandler {
 
     @SneakyThrows
     public void stop(){
-        if(group == null || group.isShutdown()) return;
+        log.close();
+        clientGroup.shutdownGracefully().sync();
         group.shutdownGracefully().sync();
     }
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        Optional<?> invoked = Dynamic.invoke(this, "handle", evt);
+        Dynamic.invoke(this, "handle", evt);
         ctx.fireUserEventTriggered(evt);
     }
-
-
 
     public void handle(StateTransitionEvent event){
         state.init();
@@ -165,11 +157,7 @@ public class Node extends ChannelDuplexHandler {
     }
 
     public void handle(ScheduleHeartbeatTimeoutEvent event){
-        scheduledHeartbeat = heartbeatGenerator.scheduleAtFixedRate(() -> {
-            AppendEntries heartbeat = AppendEntries.heartbeat(currentTerm, prevLogIndex(), prevLogTerm(), commitIndex, id);
-            activePeers.values().forEach(peer -> peer.send(heartbeat));
-            trigger(new HeartbeatTimeoutEvent(id));
-        }, 0, event.timeout(), TimeUnit.MILLISECONDS);  // FIXME only send when peer is idle
+          activePeers.values().forEach(peer -> peer.trigger(event));
     }
 
     public void handle(SendRequestVoteEvent event){
@@ -189,6 +177,19 @@ public class Node extends ChannelDuplexHandler {
         updateState();
     }
 
+    public void handle(PeerDisconnectedEvent event) {
+        activePeers.remove(event.peer().id);
+        event.peer().trigger(new ConnectPeerEvent(event.peer()));
+    }
+
+    public void handle(ConnectPeerEvent event){
+        event.peer().connect();
+    }
+
+    public void handle(CancelHeartbeatTimeoutEvent event){
+        activePeers.values().forEach( peer -> peer.trigger(event));
+    }
+
     public void updateState(){
         while(commitIndex > lastApplied){
             lastApplied++;
@@ -202,6 +203,7 @@ public class Node extends ChannelDuplexHandler {
         peer.nextIndex = log.getLastIndex() + 1;
         peer.matchIndex = 0;
         activePeers.put(event.peer().id, event.peer());
+        state.handle(event);
     }
 
     public Long nextTimeout(){
@@ -236,7 +238,7 @@ public class Node extends ChannelDuplexHandler {
     }
 
     public boolean receivedHeartbeatSinceLast(Instant heartbeat){
-        return lastHeartbeat != null  && heartbeat.isBefore(lastHeartbeat);
+        return lastHeartbeat != null && heartbeat != null && heartbeat.isBefore(lastHeartbeat);
     }
 
     public void add(Command command) {
@@ -247,14 +249,21 @@ public class Node extends ChannelDuplexHandler {
         // TODO set a timer and then replicate
 
         long lastLogIndex = log.getLastIndex();
-        AppendEntries msg = AppendEntries.heartbeat(currentTerm, prevLogIndex(), prevLogTerm(), commitIndex, id);
         activePeers.values().forEach(peer -> {
             long nextIndex = peer.nextIndex;
             if(lastLogIndex >= nextIndex){
                 List<byte[]> entries = logEntriesFrom(nextIndex);
-                peer.send(msg.withEntries(entries));
+                peer.send(heartbeat(peer).withEntries(entries));
             }
         });
+    }
+
+    public AppendEntries heartbeat(Peer peer){
+        long prevLogIndex = peer.nextIndex - 1;
+        LogEntry previousEntry = log.get(prevLogIndex);
+        prevLogIndex = previousEntry != null ? prevLogIndex: 0;
+        long prevLogTerm = previousEntry != null ? previousEntry.getTerm() : 0;
+        return AppendEntries.heartbeat(currentTerm, prevLogIndex, prevLogTerm, commitIndex, id);
     }
     
     protected void sendAppendEntriesTo(Peer peer, long index){

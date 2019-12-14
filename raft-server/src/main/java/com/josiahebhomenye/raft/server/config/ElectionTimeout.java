@@ -7,7 +7,6 @@ import java.time.Duration;
 
 public class ElectionTimeout extends RangeTimeout {
 
-
     public ElectionTimeout(Config config){
             super(config.getDuration("raft.timeout.election.lower")
                     , config.getDuration("raft.timeout.election.upper"));

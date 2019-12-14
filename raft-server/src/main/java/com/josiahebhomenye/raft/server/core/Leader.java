@@ -14,7 +14,20 @@ public class Leader extends NodeState {
 
     @Override
     public void init() {
-        sendHeartbeat();
+        node.trigger(new ScheduleHeartbeatTimeoutEvent(node.id, node.nextHeartbeatTimeout()));
+    }
+
+    @Override
+    public void handle(PeerConnectedEvent event) {
+        event.peer().trigger(new ScheduleHeartbeatTimeoutEvent(node.id, node.nextHeartbeatTimeout()));
+    }
+
+    @Override
+    public void transitionTo(NodeState newState) {
+        if(!this.equals(newState)) {
+            node.trigger(new CancelHeartbeatTimeoutEvent());
+            super.transitionTo(newState);
+        }
     }
 
 
@@ -23,6 +36,12 @@ public class Leader extends NodeState {
         node.add(event.command());
         event.sender().writeAndFlush(Acknowledgement.successful());
         node.replicate();   // TODO don't send if previously sent pending response
+    }
+
+    @Override
+    public void handle(HeartbeatTimeoutEvent event) {
+        AppendEntries heartbeat = node.heartbeat(event.peer());
+        event.peer().send(heartbeat);
     }
 
     @Override
@@ -72,7 +91,4 @@ public class Leader extends NodeState {
         return replicated >= node.config.majority || (float)(replicated/node.activePeers.size()) >= 0.5;
     }
 
-    private void sendHeartbeat(){
-        node.trigger(new ScheduleHeartbeatTimeoutEvent(node.id, node.nextHeartbeatTimeout()));
-    }
 }

@@ -6,7 +6,6 @@ import com.josiahebhomenye.raft.RequestVote;
 import com.josiahebhomenye.raft.RequestVoteReply;
 import com.josiahebhomenye.raft.server.event.*;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
@@ -38,10 +37,10 @@ public class CandidateTest extends NodeStateTest {
         assertEquals(1L, node.currentTerm);
         assertEquals(node.id, node.votedFor);
 
-        ScheduleTimeoutEvent event = userEventCapture.get(0);
-        SendRequestVoteEvent requestVoteEvent = userEventCapture.get(1);
+        ScheduleTimeoutEvent event = userEventCapture.get(ScheduleTimeoutEvent.class).get();
+        SendRequestVoteEvent requestVoteEvent = userEventCapture.get(SendRequestVoteEvent.class).get();
 
-        assertTrue(event.timeout() >= 150 && event.timeout() <= 300);
+        assertElectionTimeout(event);
         assertEquals(new RequestVote(1L, 0, 0, node.id), requestVoteEvent.requestVote());
     }
 
@@ -113,10 +112,10 @@ public class CandidateTest extends NodeStateTest {
         assertEquals(node.id, node.votedFor);
         assertEquals(1, node.votes);
 
-        ScheduleTimeoutEvent event = userEventCapture.get(0);
-        SendRequestVoteEvent requestVoteEvent = userEventCapture.get(1);
+        ScheduleTimeoutEvent event = userEventCapture.get(ScheduleTimeoutEvent.class).get();
+        SendRequestVoteEvent requestVoteEvent = userEventCapture.get(SendRequestVoteEvent.class).get();
 
-        assertTrue(event.timeout() >= 150 && event.timeout() <= 300);
+        assertElectionTimeout(event);
         assertEquals(new RequestVote(2L, 0, 0, node.id), requestVoteEvent.requestVote());
     }
 }

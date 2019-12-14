@@ -3,14 +3,11 @@ package com.josiahebhomenye.raft.server.core;
 import com.josiahebhomenye.raft.AppendEntriesReply;
 import com.josiahebhomenye.raft.server.event.*;
 
-import java.time.Instant;
-import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 public abstract class NodeState {
 
+    // FIXME change to enum
     public static final Follower FOLLOWER(){ return new Follower(); }
     public static final Candidate CANDIDATE() {return new Candidate(); }
     public static final Leader LEADER()  { return new Leader(); };
@@ -41,10 +38,6 @@ public abstract class NodeState {
     }
 
     public void init(){
-        if(node.scheduledHeartbeat != null){
-            node.scheduledHeartbeat.cancel(true);
-            node.scheduledHeartbeat = null;
-        }
     }
 
     public void handle(ElectionTimeoutEvent event){}
@@ -59,9 +52,13 @@ public abstract class NodeState {
 
     public void handle(RequestVoteReplyEvent event){}
 
-    public void handle(HeartbeatTimeoutEvent heartbeatTimeoutEvent){}
+    public void handle(HeartbeatTimeoutEvent event){}
 
-    public void handle(ReceivedCommandEvent event){};
+    public void handle(PeerConnectedEvent event){
+
+    }
+
+    public void handle(ReceivedCommandEvent event){}
 
     public String name(){
         return this.getClass().getSimpleName();
@@ -88,6 +85,7 @@ public abstract class NodeState {
     public int hashCode() {
         return Objects.hash(name());
     }
+
 
     public static class NullState extends NodeState{
 

@@ -8,10 +8,7 @@ import com.josiahebhomenye.raft.comand.Set;
 import com.josiahebhomenye.raft.server.event.*;
 import org.junit.Test;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 import static org.junit.Assert.*;
 import static com.josiahebhomenye.raft.server.core.NodeState.*;
@@ -35,37 +32,11 @@ public class LeaderTest extends NodeStateTest {
 
         leader.init();
 
-        AppendEntries expected = AppendEntries.heartbeat(node.currentTerm, 0L, 0L, 0L, node.id);
-
-        assertEquals(expected, channel.readOutbound());
-        assertEquals(expected, channel.readOutbound());
-        assertEquals(expected, channel.readOutbound());
-        assertEquals(expected, channel.readOutbound());
-
         ScheduleHeartbeatTimeoutEvent event = userEventCapture.get(0);
 
-        assertEquals(50L, event.timeout());
+        assertEquals(config.heartbeatTimeout.get(), event.timeout());
     }
 
-    @Test
-    public void send_heartbeat_on_heartbeat_timeout_event(){
-        node.currentTerm = 1;
-
-        peers.forEach(peer -> node.handle(new PeerConnectedEvent(peer)));
-
-        leader.handle(new HeartbeatTimeoutEvent(node.id));
-
-        AppendEntries expected = AppendEntries.heartbeat(node.currentTerm, 0L, 0L, 0L, node.id);
-
-        assertEquals(expected, channel.readOutbound());
-        assertEquals(expected, channel.readOutbound());
-        assertEquals(expected, channel.readOutbound());
-        assertEquals(expected, channel.readOutbound());
-
-        ScheduleHeartbeatTimeoutEvent event = userEventCapture.get(0);
-
-        assertEquals(50L, event.timeout());
-    }
 
     @Test
     public void acknowledge_client_command_request_and_replicate_to_followers() {
@@ -130,7 +101,7 @@ public class LeaderTest extends NodeStateTest {
 
 
         CommitEvent expected = new CommitEvent(7L, node.id);
-        CommitEvent actual = userEventCapture.get(0);
+        CommitEvent actual = userEventCapture.get(CommitEvent.class).get();
 
         assertEquals(expected, actual);
     }
@@ -139,7 +110,7 @@ public class LeaderTest extends NodeStateTest {
     public void retry_append_entries_with_decremented_nextIndex_on_rejection(){
         node.currentTerm = 3;
         node.id = leaderId;
-        peers.forEach(peer -> node.handle(new PeerConnectedEvent(peer)));
+
 
         node.log.add(new LogEntry(1, new Set(3)), 1);
         node.log.add(new LogEntry(1, new Set(1)), 2);
@@ -152,7 +123,7 @@ public class LeaderTest extends NodeStateTest {
         node.log.add(new LogEntry(3, new Set(5)), 7);
         node.log.add(new LogEntry(3, new Set(4)), 8);
 
-        peers.get(0).nextIndex = 6;
+        peers.forEach(peer -> node.handle(new PeerConnectedEvent(peer)));
 
 
         AppendEntriesReplyEvent event = new AppendEntriesReplyEvent(new AppendEntriesReply(3, false), peers.get(0));
@@ -161,9 +132,6 @@ public class LeaderTest extends NodeStateTest {
         leader.handle(event);
 
         List<byte[]> missingEntries = new ArrayList<>();
-        missingEntries.add(new LogEntry(3, new Set(0)).serialize());
-        missingEntries.add(new LogEntry(3, new Set(7)).serialize());
-        missingEntries.add(new LogEntry(3, new Set(5)).serialize());
         missingEntries.add(new LogEntry(3, new Set(4)).serialize());
 
         AppendEntries expected = new AppendEntries(3, 7, 3, 0, leaderId, missingEntries);
@@ -171,5 +139,16 @@ public class LeaderTest extends NodeStateTest {
 
         assertEquals(expected, actual);
 
+    }
+
+    @Test
+    public void heartbeat_schedule_is_canceled_when_transition_away_from_leader(){
+        leader.init();
+
+        leader.transitionTo(FOLLOWER());
+
+        Optional<CancelHeartbeatTimeoutEvent> event = userEventCapture.get(CancelHeartbeatTimeoutEvent.class);
+
+        assertTrue("CancelHeartbeatTimeoutEvent was not triggered", event.isPresent());
     }
 }

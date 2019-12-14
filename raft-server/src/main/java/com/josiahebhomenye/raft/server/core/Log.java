@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 
-public class Log {
+public class Log implements AutoCloseable{
     private static final int INT_SIZE = 4;
     public static final int LONG_SIZE = 8;
     private static final int COMMAND_SIZE = INT_SIZE * 2;
@@ -18,7 +18,7 @@ public class Log {
 
     @SneakyThrows
     public Log(String path){
-        data = new RandomAccessFile(path, "rw");
+        data = new RandomAccessFile(path, "rwd");
     }
 
     @SneakyThrows
@@ -37,7 +37,11 @@ public class Log {
         data.seek(pos(index));
         data.read(buff);
 
-        return LogEntry.deserialize(buff);
+        try {
+            return LogEntry.deserialize(buff);
+        } catch (Exception e) {
+            return  null;
+        }
     }
 
     private long pos(long index){
@@ -45,6 +49,7 @@ public class Log {
     }
 
     @SneakyThrows
+    @Override
     public void close(){
         data.close();
     }

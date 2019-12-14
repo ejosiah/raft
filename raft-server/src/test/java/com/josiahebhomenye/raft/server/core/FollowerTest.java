@@ -100,8 +100,8 @@ public class FollowerTest extends NodeStateTest{
 
         ScheduleTimeoutEvent event = userEventCapture.get(0);
 
+        assertElectionTimeout(event);
         assertEquals(node.state, follower);
-        assertTrue(event.timeout() >= 150 && event.timeout() <= 300);
     }
 
     @Test
@@ -131,8 +131,8 @@ public class FollowerTest extends NodeStateTest{
 
         ScheduleTimeoutEvent event = userEventCapture.get(0);
 
+        assertElectionTimeout(event);
         assertEquals(node.state, follower);
-        assertTrue(event.timeout() >= 150 && event.timeout() <= 300);
     }
 
     @Test
@@ -140,7 +140,7 @@ public class FollowerTest extends NodeStateTest{
     public void Follower_should_not_grant_vote_when_requestors_term_is_less_than_current_term(){
         node.currentTerm = 2;
         InetSocketAddress rquestorId = new InetSocketAddress("localhost", 9001);
-        Peer peer = new Peer(rquestorId, channel, group);
+        Peer peer = new Peer(rquestorId, node, group);
         peer.channel = channel;
         node.activePeers.put(rquestorId, peer);
 
@@ -160,7 +160,7 @@ public class FollowerTest extends NodeStateTest{
         node.currentTerm = 2;
         node.votedFor = new InetSocketAddress("localhost", 9001);
         InetSocketAddress rquestorId = new InetSocketAddress("localhost", 9001);
-        Peer peer = new Peer(rquestorId, channel, group);
+        Peer peer = new Peer(rquestorId, node, group);
         peer.channel = channel;
         node.activePeers.put(rquestorId, peer);
 
@@ -179,7 +179,7 @@ public class FollowerTest extends NodeStateTest{
     public void follower_should_not_grant_vote_when_candidates_last_log_term_entry_is_not_up_to_date(){
         node.currentTerm = 3;
         InetSocketAddress rquestorId = new InetSocketAddress("localhost", 9001);
-        Peer peer = new Peer(rquestorId, channel, group);
+        Peer peer = new Peer(rquestorId, node, group);
         peer.channel = channel;
         node.activePeers.put(rquestorId, peer);
         node.log.add(new LogEntry(1, new Set(5)), 1);
@@ -202,7 +202,7 @@ public class FollowerTest extends NodeStateTest{
     public void follower_should_not_grant_vote_when_candidates_last_log_index_is_not_up_to_date(){
         node.currentTerm = 3;
         InetSocketAddress rquestorId = new InetSocketAddress("localhost", 9001);
-        Peer peer = new Peer(rquestorId, channel, group);
+        Peer peer = new Peer(rquestorId, node, group);
         peer.channel = channel;
         node.activePeers.put(rquestorId, peer);
         node.log.add(new LogEntry(1, new Set(5)), 1);
@@ -225,7 +225,7 @@ public class FollowerTest extends NodeStateTest{
     public void grant_vote_when_all_conditions_are_met(){
         node.currentTerm = 2;
         InetSocketAddress rquestorId = new InetSocketAddress("localhost", 9001);
-        Peer peer = new Peer(rquestorId, channel, group);
+        Peer peer = new Peer(rquestorId, node, group);
         peer.channel = channel;
         node.activePeers.put(rquestorId, peer);
         node.log.add(new LogEntry(1, new Set(5)), 1);

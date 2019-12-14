@@ -1,14 +1,11 @@
 package com.josiahebhomenye.raft.server.event;
 
 import com.josiahebhomenye.raft.server.core.NodeState;
-import com.sun.istack.internal.localization.NullLocalizable;
 import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Value;
 import lombok.experimental.Accessors;
-import static com.josiahebhomenye.raft.server.core.NodeState.*;
 import java.net.InetSocketAddress;
+import static com.josiahebhomenye.raft.server.core.NodeState.*;
 
 
 @Value

@@ -20,25 +20,49 @@ public class Dynamic {
     @SneakyThrows
     @SuppressWarnings("unchecked")
     public static <T> Optional<T> invoke(Object target, String methodName, Object...args){
-        Class<T> clazz = (Class<T>) target.getClass();
-        Method method;
         try {
-            Class<?>[] params = new Class[args.length];
-            IntStream.range(0, args.length).forEach(i -> params[i] = args[i].getClass());
-            method = clazz.getMethod(methodName, params);
-            Object resp = method.invoke(target, args);
-            if(resp != null){
-                log.debug("invoked {}.{}({})", target, methodName, Arrays.toString(args));
-                return Optional.of((T)resp);
-            }else{
-                return Optional.of((T)Void.instance);
-            }
-       }catch (NoSuchMethodException ex){
-            log.debug("method {}({}) not found on target {}", methodName, Arrays.toString(args), target);
-            return Optional.empty();
+
+            Optional<Method> method = getMethod(target, methodName, args);
+            log.debug("invoking {}.{}({})", target, methodName, Arrays.toString(args));
+            return  method.map(m -> invoke(m, target, args));
         }catch (Exception ex){
             log.warn("exception encountered trying to invoke {}.{}({}}", target, methodName, Arrays.toString(args));
             throw ex;
         }
+    }
+
+    private static Optional<Method> getMethod(Object target, String methodName, Object...args){
+        Class<?> clazz = target.getClass();
+        Class<?>[] params = new Class[args.length];
+        IntStream.range(0, args.length).forEach(i -> params[i] = args[i].getClass());
+
+        try {
+            return  Optional.of(clazz.getMethod(methodName, params));
+        } catch (NoSuchMethodException e) {
+
+            Optional<Method> res = Arrays.stream(clazz.getMethods())
+                .filter(m -> m.getName().equals(methodName))
+                .filter(m -> m.getParameterCount() == params.length)
+                .filter( m -> {
+                    Class<?>[] mParams = m.getParameterTypes();
+                    for(int i = 0; i < params.length; i++){
+                        if(!mParams[i].isAssignableFrom(params[i])) return false;
+                    }
+                    return true;
+                }).findFirst();
+
+            if(!res.isPresent()){
+                log.debug("method {}({}) not found on target {}", methodName, Arrays.toString(args), target);
+            }
+
+            return  res;
+        }
+    }
+
+    @SneakyThrows
+    @SuppressWarnings("unchecked")
+    public static <T> T invoke(Method method, Object target, Object...args){
+        Object res =  method.invoke(target, args);
+        return res != null ? (T)res : (T)Void.instance;
     }
 }

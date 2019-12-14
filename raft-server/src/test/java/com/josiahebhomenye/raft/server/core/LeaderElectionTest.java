@@ -3,6 +3,8 @@ package com.josiahebhomenye.raft.server.core;
 import com.josiahebhomenye.raft.AppendEntries;
 import com.josiahebhomenye.raft.RequestVote;
 import com.josiahebhomenye.raft.RequestVoteReply;
+import com.josiahebhomenye.raft.server.config.ElectionTimeout;
+import com.josiahebhomenye.raft.server.config.HeartbeatTimeout;
 import com.josiahebhomenye.raft.server.config.ServerConfig;
 import com.josiahebhomenye.raft.server.event.*;
 import com.josiahebhomenye.raft.server.support.NodeWaitLatch;
@@ -18,6 +20,10 @@ import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.*;
 import static com.josiahebhomenye.raft.server.core.NodeState.*;
+
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -33,8 +39,14 @@ public class LeaderElectionTest {
     CountDownLatch nodeLatch;
     Node node;
 
+    ElectionTimeout electionTimeout = new ElectionTimeout(Duration.of(150, ChronoUnit.MILLIS), Duration.of(300, ChronoUnit.MILLIS));
+    HeartbeatTimeout heartbeatTimeout = new HeartbeatTimeout(Duration.of(50, ChronoUnit.MILLIS));
+
     @Before
     public void setup(){
+        config = config.withElectionTimeout(electionTimeout).withHeartbeatTimeout(heartbeatTimeout);
+
+        try(Log log = new Log(config.logPath)){ log.clear(); }catch (Exception ex){} // FIXME do this inside log.clea()
         testLatch = new CountDownLatch(1);
         nodeLatch = new CountDownLatch(1);
         userEventCapture.ignore(PeerConnectedEvent.class, AppendEntriesEvent.class, RequestVoteReplyEvent.class);
@@ -64,7 +76,7 @@ public class LeaderElectionTest {
         node = new Node(config);
         node.addPreProcessInterceptors(userEventCapture);
         node.addPostProcessInterceptors(new NodeWaitLatch(testLatch, nodeLatch, (Node, evt) -> {
-           return evt instanceof HeartbeatTimeoutEvent && node.currentTerm == 1;
+           return evt instanceof ScheduleHeartbeatTimeoutEvent && node.currentTerm == 1;
         }));
         node.start();
 
@@ -74,15 +86,14 @@ public class LeaderElectionTest {
         assertEquals(node.id, node.votedFor);
         assertEquals(LEADER(), node.state);
 
-        assertEquals(new StateTransitionEvent(NULL_STATE(), FOLLOWER(), node.id), userEventCapture.get(0));
-        assertTrue(userEventCapture.get(1) instanceof ScheduleTimeoutEvent);
-        assertTrue(userEventCapture.get(2) instanceof ElectionTimeoutEvent);
-        assertEquals(new StateTransitionEvent(FOLLOWER(), CANDIDATE(), node.id), userEventCapture.get(3));
-        assertTrue(userEventCapture.get(4) instanceof ScheduleTimeoutEvent);
-        assertEquals(new SendRequestVoteEvent(new RequestVote(1L, 0, 0, node.id)), userEventCapture.get(5));
-        assertEquals(new StateTransitionEvent(CANDIDATE(), LEADER(), node.id), userEventCapture.get(6));
-        assertEquals(new ScheduleHeartbeatTimeoutEvent(node.id, 50L), userEventCapture.get(7));
-        assertEquals(new HeartbeatTimeoutEvent(node.id), userEventCapture.get(8));
+        assertEquals("expected a StateTransitionEvent to be triggered", new StateTransitionEvent(NULL_STATE(), FOLLOWER(), node.id), userEventCapture.get(0));
+        assertTrue("expected a ScheduleTimeoutEvent to be triggered", userEventCapture.get(1) instanceof ScheduleTimeoutEvent);
+        assertTrue("expected a ElectionTimeoutEvent to be triggered", userEventCapture.get(2) instanceof ElectionTimeoutEvent);
+        assertEquals("expected a StateTransitionEvent to be triggered", new StateTransitionEvent(FOLLOWER(), CANDIDATE(), node.id), userEventCapture.get(3));
+        assertTrue("expected a ScheduleTimeoutEvent to be triggered", userEventCapture.get(4) instanceof ScheduleTimeoutEvent);
+        assertEquals("expected a SendRequestVoteEvent to be triggered", new SendRequestVoteEvent(new RequestVote(1L, 0, 0, node.id)), userEventCapture.get(5));
+        assertEquals("expected a StateTransitionEvent to be triggered", new StateTransitionEvent(CANDIDATE(), LEADER(), node.id), userEventCapture.get(6));
+        assertEquals("expected a ScheduleHeartbeatTimeoutEvent to be triggered", new ScheduleHeartbeatTimeoutEvent(node.id, config.heartbeatTimeout.get()), userEventCapture.get(7));
     }
 
     @Test
@@ -101,8 +112,9 @@ public class LeaderElectionTest {
         node = new Node(config);
         node.addPreProcessInterceptors(userEventCapture);
         node.addPostProcessInterceptors(new NodeWaitLatch(testLatch, nodeLatch, (Node, evt) -> {
-            return evt instanceof HeartbeatTimeoutEvent && node.currentTerm == 2;
+            return evt instanceof ScheduleHeartbeatTimeoutEvent && node.currentTerm == 2;
         }));
+
         node.start();
 
         testLatch.await(10, TimeUnit.SECONDS);
@@ -126,8 +138,7 @@ public class LeaderElectionTest {
         // star new election for term 2
         assertEquals(new SendRequestVoteEvent(new RequestVote(2L, 0, 0, node.id)), userEventCapture.get(8));
         assertEquals(new StateTransitionEvent(CANDIDATE(), LEADER(), node.id), userEventCapture.get(9));
-        assertEquals(new ScheduleHeartbeatTimeoutEvent(node.id, 50L), userEventCapture.get(10));
-        assertEquals(new HeartbeatTimeoutEvent(node.id), userEventCapture.get(11));
+        assertEquals(new ScheduleHeartbeatTimeoutEvent(node.id, config.heartbeatTimeout.get()), userEventCapture.get(10));
     }
 
     @Test
