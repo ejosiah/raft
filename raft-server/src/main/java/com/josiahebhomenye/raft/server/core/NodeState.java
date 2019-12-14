@@ -32,7 +32,7 @@ public abstract class NodeState {
     }
 
     public void handle(AppendEntriesEvent event) {
-        if(event.msg().getTerm() >= node.currentTerm) {
+        if(event.msg().getTerm() >= node.currentTerm) { // FIXME probably also need to check log
             transitionTo(FOLLOWER());
             node.trigger(event);
         }else{

@@ -86,7 +86,7 @@ public class Node extends ChannelDuplexHandler {
     @SneakyThrows
     public void start(){
         group = new NioEventLoopGroup();
-        clientGroup = new NioEventLoopGroup(3);
+        clientGroup = new NioEventLoopGroup(10);
 
         ChannelFuture cf = new ServerBootstrap()
             .group(group, clientGroup)
@@ -169,7 +169,7 @@ public class Node extends ChannelDuplexHandler {
             AppendEntries heartbeat = AppendEntries.heartbeat(currentTerm, prevLogIndex(), prevLogTerm(), commitIndex, id);
             activePeers.values().forEach(peer -> peer.send(heartbeat));
             trigger(new HeartbeatTimeoutEvent(id));
-        }, 0, event.timeout(), TimeUnit.MILLISECONDS);
+        }, 0, event.timeout(), TimeUnit.MILLISECONDS);  // FIXME only send when peer is idle
     }
 
     public void handle(SendRequestVoteEvent event){
@@ -208,7 +208,7 @@ public class Node extends ChannelDuplexHandler {
         return config.electionTimeout.get();
     }
 
-    private boolean cancelElectionTimeOut(){
+    public boolean cancelElectionTimeOut(){
         return scheduledElectionTimeout == null || (!scheduledElectionTimeout.isCancelled()
                 && scheduledElectionTimeout.isCancellable() && scheduledElectionTimeout.cancel(false));
     }

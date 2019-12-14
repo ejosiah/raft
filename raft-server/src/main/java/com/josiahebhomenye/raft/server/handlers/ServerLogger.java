@@ -50,7 +50,7 @@ public class ServerLogger extends ChannelDuplexHandler {
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if(evt instanceof StateTransitionEvent){
             StateTransitionEvent event = (StateTransitionEvent)evt;
-            logger.info("Node: {} transition from {} state to {} state", node.getId(), event.oldState().name(), event.newState().name());
+            logger.info("Node: {} transition from {} state to {} state", node.getId(), event.oldState(), event.newState());
         }else if(evt instanceof PeerConnectedEvent){
             PeerConnectedEvent event = (PeerConnectedEvent)evt;
             logger.info("Node: {} connected to peer {}", node.getId(), event.getSource());

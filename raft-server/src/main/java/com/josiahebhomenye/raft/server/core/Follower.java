@@ -24,6 +24,7 @@ public class Follower extends NodeState {
 
     public void handle(AppendEntriesEvent event){
         node.lastHeartbeat = Instant.now();
+        node.cancelElectionTimeOut();
         node.trigger(new ScheduleTimeoutEvent(node.id, node.nextTimeout()));
         if(event.msg().getTerm() < node.currentTerm){
             event.sender().writeAndFlush(new AppendEntriesReply(node.currentTerm, false));

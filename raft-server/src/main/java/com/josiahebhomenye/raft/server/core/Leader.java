@@ -45,7 +45,6 @@ public class Leader extends NodeState {
             }
         }else{
             event.sender().nextIndex--;
-            LoggerFactory.getLogger(this.getClass()).info("sending entry from nextIndex {}", event.sender().nextIndex);
             node.sendAppendEntriesTo(event.sender(), event.sender().nextIndex);
         }
     }
