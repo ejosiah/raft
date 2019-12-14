@@ -39,7 +39,7 @@ public class NodeTest {
         Node node = new Node(config);
         assertEquals(0, node.getCurrentTerm());
         assertNull(node.getVotedFor());
-        assertEquals(NodeState.NULL_STATE, node.getState());
+        assertEquals(NodeState.NULL_STATE(), node.getState());
         assertTrue(node.getLog().isEmpty());
     }
 
@@ -75,7 +75,7 @@ public class NodeTest {
         ServerConfig config = new ServerConfig(ConfigFactory.load());
         Node node = new Node(config);
         assertEquals(1, node.getCurrentTerm());
-        assertEquals(NodeState.NULL_STATE, node.getState());
+        assertEquals(NodeState.NULL_STATE(), node.getState());
         assertEquals(new InetSocketAddress("localhost", 8080), node.getVotedFor());
         assertFalse(node.getLog().isEmpty());
         assertEquals(new LogEntry(1, new Set(5)), node.getLog().get(1));

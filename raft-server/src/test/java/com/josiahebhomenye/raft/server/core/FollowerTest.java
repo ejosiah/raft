@@ -19,7 +19,7 @@ public class FollowerTest extends NodeStateTest{
 
     @Override
     public NodeState initializeState() {
-        follower = NodeState.FOLLOWER;
+        follower = NodeState.FOLLOWER();
         follower.set(node);
         return follower;
     }
@@ -110,7 +110,7 @@ public class FollowerTest extends NodeStateTest{
         node.lastHeartbeat = lastHeartbeat;
         follower.handle(new ElectionTimeoutEvent(lastHeartbeat, node.id));
 
-        assertEquals(node.state, NodeState.CANDIDATE);
+        assertEquals(node.state, NodeState.CANDIDATE());
     }
 
     @Test
@@ -118,7 +118,7 @@ public class FollowerTest extends NodeStateTest{
         node.lastHeartbeat = null;
         follower.handle(new ElectionTimeoutEvent(null, node.id));
 
-        assertEquals(node.state, NodeState.CANDIDATE);
+        assertEquals(node.state, NodeState.CANDIDATE());
     }
 
     @Test
@@ -151,7 +151,7 @@ public class FollowerTest extends NodeStateTest{
 
         RequestVoteReply reply = channel.readOutbound();
         assertEquals(new RequestVoteReply(node.currentTerm, false), reply);
-        assertEquals(node.state, NodeState.FOLLOWER);
+        assertEquals(node.state, NodeState.FOLLOWER());
     }
 
     @Test
@@ -171,7 +171,7 @@ public class FollowerTest extends NodeStateTest{
 
         RequestVoteReply reply = channel.readOutbound();
         assertEquals(new RequestVoteReply(node.currentTerm, false), reply);
-        assertEquals(node.state, NodeState.FOLLOWER);
+        assertEquals(node.state, NodeState.FOLLOWER());
     }
 
     @Test
@@ -194,7 +194,7 @@ public class FollowerTest extends NodeStateTest{
 
         RequestVoteReply reply = channel.readOutbound();
         assertEquals(new RequestVoteReply(node.currentTerm, false), reply);
-        assertEquals(node.state, NodeState.FOLLOWER);
+        assertEquals(node.state, NodeState.FOLLOWER());
     }
 
     @Test
@@ -217,7 +217,7 @@ public class FollowerTest extends NodeStateTest{
 
         RequestVoteReply reply = channel.readOutbound();
         assertEquals(new RequestVoteReply(node.currentTerm, false), reply);
-        assertEquals(node.state, NodeState.FOLLOWER);
+        assertEquals(node.state, NodeState.FOLLOWER());
     }
 
     @Test
@@ -239,7 +239,7 @@ public class FollowerTest extends NodeStateTest{
 
         RequestVoteReply reply = channel.readOutbound();
         assertEquals(new RequestVoteReply(node.currentTerm, true), reply);
-        assertEquals(node.state, NodeState.FOLLOWER);
+        assertEquals(node.state, NodeState.FOLLOWER());
     }
 
     @Test

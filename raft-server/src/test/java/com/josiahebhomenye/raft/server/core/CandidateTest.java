@@ -26,7 +26,7 @@ public class CandidateTest extends NodeStateTest {
 
     @Override
     public NodeState initializeState() {
-        candidate = NodeState.CANDIDATE;
+        candidate = NodeState.CANDIDATE();
         candidate.set(node);
         return candidate;
     }
@@ -49,16 +49,16 @@ public class CandidateTest extends NodeStateTest {
     public void become_leader_if_received_majority_votes(){
         RequestVoteReply reply = new RequestVoteReply(1, true);
         candidate.handle(new RequestVoteReplyEvent(reply, channel));
-        assertEquals(CANDIDATE, node.state);
+        assertEquals(CANDIDATE(), node.state);
 
         candidate.handle(new RequestVoteReplyEvent(reply, channel));
-        assertEquals(CANDIDATE, node.state);
+        assertEquals(CANDIDATE(), node.state);
 
         candidate.handle(new RequestVoteReplyEvent(reply, channel));
-        assertEquals(LEADER, node.state);
+        assertEquals(LEADER(), node.state);
 
         StateTransitionEvent event = userEventCapture.get(0);
-        assertEquals(new StateTransitionEvent(CANDIDATE, LEADER, node.id), event);
+        assertEquals(new StateTransitionEvent(CANDIDATE(), LEADER(), node.id), event);
     }
 
     @Test
@@ -69,10 +69,10 @@ public class CandidateTest extends NodeStateTest {
         RequestVoteReply reply = new RequestVoteReply(1, true);
         candidate.handle(new RequestVoteReplyEvent(reply, channel));
 
-        assertEquals(LEADER, node.state);
+        assertEquals(LEADER(), node.state);
 
         StateTransitionEvent event = userEventCapture.get(0);
-        assertEquals(new StateTransitionEvent(CANDIDATE, LEADER, node.id), event);
+        assertEquals(new StateTransitionEvent(CANDIDATE(), LEADER(), node.id), event);
     }
 
     @Test
@@ -90,7 +90,7 @@ public class CandidateTest extends NodeStateTest {
         candidate.handle(expectedAppendEntriesEvent);
 
         assertEquals(0, userEventCapture.captured());
-        assertEquals(CANDIDATE, node.state);
+        assertEquals(CANDIDATE(), node.state);
 
         AppendEntriesReply expected = new AppendEntriesReply(2, false);
         AppendEntriesReply actual = channel.readOutbound();

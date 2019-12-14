@@ -31,7 +31,7 @@ public class Follower extends NodeState {
 
         if(!node.log.isEmpty()) {
             LogEntry prevEntry = node.log.get(event.msg().getPrevLogIndex());
-            if (prevEntry.getTerm() != event.msg().getPrevLogTerm()) {
+            if (prevEntry != null && prevEntry.getTerm() != event.msg().getPrevLogTerm()) {
                 event.sender().writeAndFlush(new AppendEntriesReply(node.currentTerm, false));
                 return;
             }
@@ -53,8 +53,10 @@ public class Follower extends NodeState {
 
         node.leaderId = event.msg().getLeaderId();
         long nextCommitIndex = Math.min(event.msg().getLeaderCommit(), node.log.getLastIndex());
-        node.trigger(new CommitEvent(nextCommitIndex, node.id));
         event.sender().writeAndFlush(new AppendEntriesReply(node.currentTerm, true));
+        if(nextCommitIndex > node.commitIndex) {
+            node.trigger(new CommitEvent(nextCommitIndex, node.id));
+        }
     }
 
     @Override
@@ -67,7 +69,7 @@ public class Follower extends NodeState {
         if(node.receivedHeartbeatSinceLast(event.lastheartbeat)){
             node.trigger(new ScheduleTimeoutEvent(node.id, node.nextTimeout()));
         }else{
-            transitionTo(CANDIDATE);
+            transitionTo(CANDIDATE());
         }
     }
 

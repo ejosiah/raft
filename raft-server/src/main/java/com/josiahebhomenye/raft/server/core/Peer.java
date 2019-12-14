@@ -1,6 +1,9 @@
 package com.josiahebhomenye.raft.server.core;
 
+import com.josiahebhomenye.raft.AppendEntriesReply;
 import com.josiahebhomenye.raft.RequestVoteReply;
+import com.josiahebhomenye.raft.server.event.AppendEntriesEvent;
+import com.josiahebhomenye.raft.server.event.AppendEntriesReplyEvent;
 import com.josiahebhomenye.raft.server.event.PeerConnectedEvent;
 import com.josiahebhomenye.raft.server.event.RequestVoteReplyEvent;
 import com.josiahebhomenye.raft.server.handlers.PeerChannelInitializer;
@@ -65,6 +68,8 @@ public class Peer {
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             if(msg instanceof RequestVoteReply){
                 serverChannel.pipeline().fireUserEventTriggered(new RequestVoteReplyEvent((RequestVoteReply)msg, ctx.channel()));
+            }else if(msg instanceof AppendEntriesReply){
+                serverChannel.pipeline().fireUserEventTriggered(new AppendEntriesReplyEvent((AppendEntriesReply)msg, Peer.this));
             }
         }
 

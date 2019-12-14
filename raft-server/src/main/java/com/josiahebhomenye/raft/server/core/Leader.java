@@ -3,6 +3,7 @@ package com.josiahebhomenye.raft.server.core;
 import com.josiahebhomenye.raft.Acknowledgement;
 import com.josiahebhomenye.raft.AppendEntries;
 import com.josiahebhomenye.raft.server.event.*;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
 import java.util.List;
@@ -27,8 +28,8 @@ public class Leader extends NodeState {
     @Override
     public void handle(AppendEntriesReplyEvent event) {
         if(event.msg().isSuccess()){
+            event.sender().matchIndex = event.sender().nextIndex; // TODO check this is right
             event.sender().nextIndex = node.log.getLastIndex() + 1;
-            event.sender().matchIndex = node.log.getLastIndex();
 
             long lastCommitIndex = node.commitIndex;
             long lastLogIndex = node.log.getLastIndex(); // TODO cache this
@@ -44,6 +45,7 @@ public class Leader extends NodeState {
             }
         }else{
             event.sender().nextIndex--;
+            LoggerFactory.getLogger(this.getClass()).info("sending entry from nextIndex {}", event.sender().nextIndex);
             node.sendAppendEntriesTo(event.sender(), event.sender().nextIndex);
         }
     }
@@ -71,17 +73,7 @@ public class Leader extends NodeState {
         return replicated >= node.config.majority || (float)(replicated/node.activePeers.size()) >= 0.5;
     }
 
-    @Override
-    public void handle(HeartbeatTimeoutEvent heartbeatTimeoutEvent) {
-        sendHeartbeat();
-    }
-
-
-    // TODO, we may need to do this on a different thread, if  we get too much traffic from clients
-    // we may not be able to send heartbeat in time
     private void sendHeartbeat(){
-        AppendEntries heartbeat = AppendEntries.heartbeat(node.currentTerm, node.prevLogIndex(), node.prevLogTerm(), node.commitIndex, node.id);
-        node.activePeers.values().forEach(peer -> peer.send(heartbeat));
         node.trigger(new ScheduleHeartbeatTimeoutEvent(node.id, node.nextHeartbeatTimeout()));
     }
 }

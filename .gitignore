@@ -9,5 +9,5 @@ gradlew.bat
 **/.DS_Store
 **/out/
 **/*.sc
-**/log.dat
-**/state.dat
+**/log*.dat
+**/state*.dat

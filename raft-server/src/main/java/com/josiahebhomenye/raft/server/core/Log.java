@@ -32,6 +32,7 @@ public class Log {
 
     @SneakyThrows
     public LogEntry get(long index){
+        if(index > size()) return null;
         if(index < 1) throw new IllegalArgumentException("index: " + index + ", cannot less than one");
 
         byte[] buff = new byte[SIZE_OFFSET];
@@ -83,10 +84,10 @@ public class Log {
     }
 
     // TODO optimize and get entries as byte array
-    public List<LogEntry> entriesFrom(long lastApplied) {
+    public List<LogEntry> entriesFrom(long index) {
         List<LogEntry> entries = new ArrayList<>();
         long lastIndex = getLastIndex();
-        for(long i = lastApplied; i <= lastIndex; i++){
+        for(long i = index; i <= lastIndex; i++){
             entries.add(get(i));
         }
         return entries;
@@ -94,5 +95,23 @@ public class Log {
 
     public boolean hasEntryAt(long index) {
         return getLastIndex() >= index;
+    }
+
+    @Override
+    @SneakyThrows
+    public boolean equals(Object o){
+        if (this == o) return true;
+        if (!(o instanceof Log)) return false;
+        Log log = (Log) o;
+        if(log.data.length() == 0) return false;
+        if(log.data.length() != data.length()) return false;
+
+        long lenght = data.length();
+        data.seek(0);
+        log.data.seek(0);
+        for(long i = 0; i < lenght; i++){
+            if(log.data.read() != data.read()) return false;
+        }
+        return true;
     }
 }

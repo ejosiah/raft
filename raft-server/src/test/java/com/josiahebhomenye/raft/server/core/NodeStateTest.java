@@ -26,8 +26,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.josiahebhomenye.raft.server.core.NodeState.CANDIDATE;
-import static com.josiahebhomenye.raft.server.core.NodeState.FOLLOWER;
+import static com.josiahebhomenye.raft.server.core.NodeState.*;
 import static org.junit.Assert.*;
 
 public abstract class NodeStateTest {
@@ -75,7 +74,7 @@ public abstract class NodeStateTest {
 
     @Test
     public void revert_to_follower_if_append_entries_received_from_new_leader(){
-        if(state == FOLLOWER) return;
+        if(state.equals(FOLLOWER())) return;
         node.currentTerm = 1;
         long leaderTerm = 2;
         long leaderCommit = 3;
@@ -89,14 +88,14 @@ public abstract class NodeStateTest {
         StateTransitionEvent event = userEventCapture.get(0);
         AppendEntriesEvent appendEntriesEvent = userEventCapture.get(1);
 
-        assertEquals(new StateTransitionEvent(state, FOLLOWER, node.id), event);
+        assertEquals(new StateTransitionEvent(state, FOLLOWER(), node.id), event);
         assertEquals(expectedAppendEntriesEvent, appendEntriesEvent);
-        assertEquals(FOLLOWER, node.state);
+        assertEquals(FOLLOWER(), node.state);
     }
 
     @Test
     public void revert_to_follower_if_request_vote_received_with_higher_term(){
-        if(state == FOLLOWER) return;
+        if(state.equals(FOLLOWER())) return;
         node.currentTerm = 1;
 
         RequestVote requestVote = new RequestVote(2, 2, 2, leaderId);
@@ -107,9 +106,9 @@ public abstract class NodeStateTest {
         StateTransitionEvent event = userEventCapture.get(0);
         RequestVoteEvent actual = userEventCapture.get(1);
 
-        assertEquals(new StateTransitionEvent(state, FOLLOWER, node.id), event);
+        assertEquals(new StateTransitionEvent(state, FOLLOWER(), node.id), event);
         assertEquals(expected, actual);
-        assertEquals(FOLLOWER, node.state);
+        assertEquals(FOLLOWER(), node.state);
     }
 
     public abstract NodeState initializeState();

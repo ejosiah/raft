@@ -5,15 +5,16 @@ import com.josiahebhomenye.raft.server.event.*;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public abstract class NodeState {
 
-    public static final Follower FOLLOWER = new Follower();
-    public static final Candidate CANDIDATE = new Candidate();
-    public static final Leader LEADER = new Leader();
-    public static final NodeState NULL_STATE = new NodeState() {};
+    public static final Follower FOLLOWER(){ return new Follower(); }
+    public static final Candidate CANDIDATE() {return new Candidate(); }
+    public static final Leader LEADER()  { return new Leader(); };
+    public static final NodeState NULL_STATE() { return new NullState(); };
 
     protected Node node;
 
@@ -32,7 +33,7 @@ public abstract class NodeState {
 
     public void handle(AppendEntriesEvent event) {
         if(event.msg().getTerm() >= node.currentTerm) {
-            transitionTo(FOLLOWER);
+            transitionTo(FOLLOWER());
             node.trigger(event);
         }else{
             event.sender().writeAndFlush(new AppendEntriesReply(node.currentTerm, false));
@@ -46,7 +47,7 @@ public abstract class NodeState {
     public void handle(RequestVoteEvent event){
         if(event.requestVote().getTerm() > node.currentTerm){
             node.currentTerm = event.requestVote().getTerm();
-            transitionTo(FOLLOWER);
+            transitionTo(FOLLOWER());
             node.trigger(event);
         }
     }
@@ -67,6 +68,23 @@ public abstract class NodeState {
     }
 
     public void handle(AppendEntriesReplyEvent event){
+
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof NodeState)) return false;
+        NodeState nodeState = (NodeState) o;
+        return nodeState.name().equals(name());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name());
+    }
+
+    public static class NullState extends NodeState{
 
     }
 }

@@ -27,8 +27,7 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static com.josiahebhomenye.raft.server.core.NodeState.FOLLOWER;
-import static com.josiahebhomenye.raft.server.core.NodeState.NULL_STATE;
+import static com.josiahebhomenye.raft.server.core.NodeState.*;
 
 @Getter
 public class Node extends ChannelDuplexHandler {
@@ -50,30 +49,33 @@ public class Node extends ChannelDuplexHandler {
     int votes;
     ScheduledFuture<?> scheduledElectionTimeout;
     Data data = new Data(0);
+    EventLoopGroup heartbeatGenerator;
+    ScheduledFuture<?> scheduledHeartbeat;
 
     List<ChannelDuplexHandler> preProcessInterceptors = new ArrayList<>();
     List<ChannelDuplexHandler> postProcessInterceptors = new ArrayList<>();
 
     public Node(ServerConfig config){
-        this.state = NULL_STATE;
+        this.state = NULL_STATE();
         this.state.set(this);
         this.config = config;
         this.id = config.id;
         this.activePeers = new HashMap<>();
         this.peers = new ArrayList<>();
         votes = 0;
+        heartbeatGenerator = new DefaultEventLoop();
         initStateData();
     }
 
     void initStateData(){
-        try(DataInputStream in = new DataInputStream(new FileInputStream("state.dat"))){
-            currentTerm = in.readInt();
-            votedFor = new InetSocketAddress(in.readUTF(), in.readInt());
+        try(DataInputStream in = new DataInputStream(new FileInputStream(config.statePath))){
+            currentTerm = in.readLong();
+            votedFor = (in.available() > 0) ? new InetSocketAddress(in.readUTF(), in.readInt()) : null;
         }catch(Exception ex){
             currentTerm = 0;
             votedFor = null;
         }
-        log = new Log("log.dat");
+        log = new Log(config.logPath);
         commitIndex = 0;
         lastApplied = 0;
     }
@@ -107,7 +109,7 @@ public class Node extends ChannelDuplexHandler {
                 channel = ctx.channel();
                 peers = config.peers.stream().map(id -> new Peer(id, channel, clientGroup)).collect(Collectors.toList());
                 peers.forEach(Peer::connect);
-                state.transitionTo(FOLLOWER);
+                state.transitionTo(FOLLOWER());
             }
         });
         super.bind(ctx, localAddress, promise);
@@ -115,7 +117,7 @@ public class Node extends ChannelDuplexHandler {
 
     @SneakyThrows
     public void stop(){
-        if(group.isShutdown()) return;
+        if(group == null || group.isShutdown()) return;
         group.shutdownGracefully().sync();
     }
 
@@ -132,6 +134,10 @@ public class Node extends ChannelDuplexHandler {
     }
 
     public void handle(AppendEntriesEvent event){
+        state.handle(event);
+    }
+
+    public void handle(AppendEntriesReplyEvent event){
         state.handle(event);
     }
 
@@ -156,7 +162,11 @@ public class Node extends ChannelDuplexHandler {
     }
 
     public void handle(ScheduleHeartbeatTimeoutEvent event){
-        group.schedule(() -> trigger(new HeartbeatTimeoutEvent(id)), event.timeout(), TimeUnit.MILLISECONDS);
+        scheduledHeartbeat = heartbeatGenerator.scheduleAtFixedRate(() -> {
+            AppendEntries heartbeat = AppendEntries.heartbeat(currentTerm, prevLogIndex(), prevLogTerm(), commitIndex, id);
+            activePeers.values().forEach(peer -> peer.send(heartbeat));
+            trigger(new HeartbeatTimeoutEvent(id));
+        }, 0, event.timeout(), TimeUnit.MILLISECONDS);
     }
 
     public void handle(SendRequestVoteEvent event){

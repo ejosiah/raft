@@ -22,7 +22,7 @@ public class LeaderTest extends NodeStateTest {
 
     @Override
     public NodeState initializeState() {
-        leader =  LEADER;
+        leader =  LEADER();
         leader.set(node);
         return leader;
     }

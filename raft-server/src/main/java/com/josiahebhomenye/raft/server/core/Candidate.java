@@ -26,7 +26,7 @@ public class Candidate extends NodeState {
         if(event.reply().isVoteGranted()){
             node.votes++;
             if(receivedMajorityVotes()){
-                transitionTo(LEADER);
+                transitionTo(LEADER());
             }
         }
     }

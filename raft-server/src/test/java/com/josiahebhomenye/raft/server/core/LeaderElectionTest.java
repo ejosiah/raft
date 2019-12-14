@@ -72,15 +72,15 @@ public class LeaderElectionTest {
 
         assertEquals(1L, node.currentTerm);
         assertEquals(node.id, node.votedFor);
-        assertEquals(LEADER, node.state);
+        assertEquals(LEADER(), node.state);
 
-        assertEquals(new StateTransitionEvent(NULL_STATE, FOLLOWER, node.id), userEventCapture.get(0));
+        assertEquals(new StateTransitionEvent(NULL_STATE(), FOLLOWER(), node.id), userEventCapture.get(0));
         assertTrue(userEventCapture.get(1) instanceof ScheduleTimeoutEvent);
         assertTrue(userEventCapture.get(2) instanceof ElectionTimeoutEvent);
-        assertEquals(new StateTransitionEvent(FOLLOWER, CANDIDATE, node.id), userEventCapture.get(3));
+        assertEquals(new StateTransitionEvent(FOLLOWER(), CANDIDATE(), node.id), userEventCapture.get(3));
         assertTrue(userEventCapture.get(4) instanceof ScheduleTimeoutEvent);
         assertEquals(new SendRequestVoteEvent(new RequestVote(1L, 0, 0, node.id)), userEventCapture.get(5));
-        assertEquals(new StateTransitionEvent(CANDIDATE, LEADER, node.id), userEventCapture.get(6));
+        assertEquals(new StateTransitionEvent(CANDIDATE(), LEADER(), node.id), userEventCapture.get(6));
         assertEquals(new ScheduleHeartbeatTimeoutEvent(node.id, 50L), userEventCapture.get(7));
         assertEquals(new HeartbeatTimeoutEvent(node.id), userEventCapture.get(8));
     }
@@ -109,12 +109,12 @@ public class LeaderElectionTest {
 
         assertEquals(2L, node.currentTerm);
         assertEquals(node.id, node.votedFor);
-        assertEquals(LEADER, node.state);
+        assertEquals(LEADER(), node.state);
 
-        assertEquals(new StateTransitionEvent(NULL_STATE, FOLLOWER, node.id), userEventCapture.get(0));
+        assertEquals(new StateTransitionEvent(NULL_STATE(), FOLLOWER(), node.id), userEventCapture.get(0));
         assertTrue(userEventCapture.get(1) instanceof ScheduleTimeoutEvent);
         assertTrue(userEventCapture.get(2) instanceof ElectionTimeoutEvent);
-        assertEquals(new StateTransitionEvent(FOLLOWER, CANDIDATE, node.id), userEventCapture.get(3));
+        assertEquals(new StateTransitionEvent(FOLLOWER(), CANDIDATE(), node.id), userEventCapture.get(3));
 
         assertTrue(userEventCapture.get(4) instanceof ScheduleTimeoutEvent);
         assertEquals(new SendRequestVoteEvent(new RequestVote(1L, 0, 0, node.id)), userEventCapture.get(5));
@@ -125,7 +125,7 @@ public class LeaderElectionTest {
 
         // star new election for term 2
         assertEquals(new SendRequestVoteEvent(new RequestVote(2L, 0, 0, node.id)), userEventCapture.get(8));
-        assertEquals(new StateTransitionEvent(CANDIDATE, LEADER, node.id), userEventCapture.get(9));
+        assertEquals(new StateTransitionEvent(CANDIDATE(), LEADER(), node.id), userEventCapture.get(9));
         assertEquals(new ScheduleHeartbeatTimeoutEvent(node.id, 50L), userEventCapture.get(10));
         assertEquals(new HeartbeatTimeoutEvent(node.id), userEventCapture.get(11));
     }
@@ -145,7 +145,7 @@ public class LeaderElectionTest {
         node.addPreProcessInterceptors(new PreElectionSetup(peers));
         node.addPreProcessInterceptors(userEventCapture);
         node.addPostProcessInterceptors(new NodeWaitLatch(testLatch, nodeLatch, (Node, evt) -> {
-            return evt.equals(new StateTransitionEvent(CANDIDATE, FOLLOWER, node.id));
+            return evt.equals(new StateTransitionEvent(CANDIDATE(), FOLLOWER(), node.id));
         }));
 
         node.start();
@@ -153,15 +153,15 @@ public class LeaderElectionTest {
         testLatch.await(10, TimeUnit.SECONDS);
 
         assertEquals(1L, node.currentTerm);
-        assertEquals(FOLLOWER, node.state);
+        assertEquals(FOLLOWER(), node.state);
 
-        assertEquals(new StateTransitionEvent(NULL_STATE, FOLLOWER, node.id), userEventCapture.get(0));
+        assertEquals(new StateTransitionEvent(NULL_STATE(), FOLLOWER(), node.id), userEventCapture.get(0));
         assertTrue(userEventCapture.get(1) instanceof ScheduleTimeoutEvent);
         assertTrue(userEventCapture.get(2) instanceof ElectionTimeoutEvent);
-        assertEquals(new StateTransitionEvent(FOLLOWER, CANDIDATE, node.id), userEventCapture.get(3));
+        assertEquals(new StateTransitionEvent(FOLLOWER(), CANDIDATE(), node.id), userEventCapture.get(3));
         assertTrue(userEventCapture.get(4) instanceof ScheduleTimeoutEvent);
         assertEquals(new SendRequestVoteEvent(new RequestVote(1L, 0, 0, node.id)), userEventCapture.get(5));
-        assertEquals(new StateTransitionEvent(CANDIDATE, FOLLOWER, node.id), userEventCapture.get(6));
+        assertEquals(new StateTransitionEvent(CANDIDATE(), FOLLOWER(), node.id), userEventCapture.get(6));
     }
 
     @Test
@@ -186,7 +186,7 @@ public class LeaderElectionTest {
         testLatch.await(10, TimeUnit.SECONDS);
 
         assertEquals(2L, node.currentTerm);
-        assertEquals(FOLLOWER, node.state);
+        assertEquals(FOLLOWER(), node.state);
 
         mockPeer.verifyMessageReceived(expectedMsg);
     }
