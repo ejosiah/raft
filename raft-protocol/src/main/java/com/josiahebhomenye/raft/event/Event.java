@@ -1,4 +1,4 @@
-package com.josiahebhomenye.raft.server.event;
+package com.josiahebhomenye.raft.event;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;

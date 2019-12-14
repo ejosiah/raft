@@ -5,6 +5,8 @@ import com.josiahebhomenye.raft.AppendEntries;
 import com.josiahebhomenye.raft.RequestVote;
 import com.josiahebhomenye.raft.comand.Command;
 import com.josiahebhomenye.raft.comand.Data;
+import com.josiahebhomenye.raft.log.Log;
+import com.josiahebhomenye.raft.log.LogEntry;
 import com.josiahebhomenye.raft.server.config.ServerConfig;
 import com.josiahebhomenye.raft.server.event.*;
 import com.josiahebhomenye.raft.server.handlers.ServerChannelInitializer;

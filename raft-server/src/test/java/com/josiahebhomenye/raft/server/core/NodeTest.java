@@ -1,6 +1,8 @@
 package com.josiahebhomenye.raft.server.core;
 
 import com.josiahebhomenye.raft.comand.Set;
+import com.josiahebhomenye.raft.log.Log;
+import com.josiahebhomenye.raft.log.LogEntry;
 import com.josiahebhomenye.raft.server.config.ServerConfig;
 import com.josiahebhomenye.raft.server.event.PeerConnectedEvent;
 import com.josiahebhomenye.raft.server.event.PeerDisconnectedEvent;

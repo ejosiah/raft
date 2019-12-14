@@ -1,5 +1,6 @@
 package com.josiahebhomenye.raft.server.event;
 
+import com.josiahebhomenye.raft.event.Event;
 import com.josiahebhomenye.raft.server.core.NodeState;
 import lombok.EqualsAndHashCode;
 import lombok.Value;

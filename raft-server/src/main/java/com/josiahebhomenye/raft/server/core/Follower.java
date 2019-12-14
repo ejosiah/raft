@@ -3,6 +3,7 @@ package com.josiahebhomenye.raft.server.core;
 import com.josiahebhomenye.raft.AppendEntriesReply;
 import com.josiahebhomenye.raft.RedirectCommand;
 import com.josiahebhomenye.raft.RequestVoteReply;
+import com.josiahebhomenye.raft.log.LogEntry;
 import com.josiahebhomenye.raft.server.event.*;
 
 import java.time.Instant;

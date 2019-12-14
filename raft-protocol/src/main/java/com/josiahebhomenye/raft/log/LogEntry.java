@@ -1,11 +1,9 @@
-package com.josiahebhomenye.raft.server.core;
+package com.josiahebhomenye.raft.log;
 
 import com.josiahebhomenye.raft.comand.Command;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import lombok.Value;
-
-import java.nio.ByteBuffer;
 
 @Value
 public class LogEntry {

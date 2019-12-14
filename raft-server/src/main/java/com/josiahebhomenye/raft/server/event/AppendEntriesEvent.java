@@ -1,20 +1,19 @@
 package com.josiahebhomenye.raft.server.event;
 
 import com.josiahebhomenye.raft.AppendEntries;
+import com.josiahebhomenye.raft.event.Event;
 import io.netty.channel.Channel;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
-import java.net.InetSocketAddress;
-
 
 @Data
 @NoArgsConstructor
 @Accessors(fluent = true)
 @EqualsAndHashCode(callSuper=false)
-public class AppendEntriesEvent extends Event{
+public class AppendEntriesEvent extends Event {
     private AppendEntries msg;
     private Channel sender;
 

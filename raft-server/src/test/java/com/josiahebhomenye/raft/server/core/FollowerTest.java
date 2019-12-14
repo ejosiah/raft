@@ -2,6 +2,7 @@ package com.josiahebhomenye.raft.server.core;
 
 import com.josiahebhomenye.raft.*;
 import com.josiahebhomenye.raft.comand.*;
+import com.josiahebhomenye.raft.log.LogEntry;
 import com.josiahebhomenye.raft.server.event.*;
 import lombok.SneakyThrows;
 import org.junit.Test;

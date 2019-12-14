@@ -2,17 +2,12 @@ package com.josiahebhomenye.raft.server.core;
 
 import com.josiahebhomenye.raft.Divide;
 import com.josiahebhomenye.raft.comand.*;
-import com.josiahebhomenye.raft.server.core.Log;
-import com.josiahebhomenye.raft.server.core.LogEntry;
+import com.josiahebhomenye.raft.log.Log;
+import com.josiahebhomenye.raft.log.LogEntry;
 import lombok.SneakyThrows;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
-import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;

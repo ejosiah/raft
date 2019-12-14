@@ -1,15 +1,12 @@
-package com.josiahebhomenye.raft.server.core;
+package com.josiahebhomenye.raft.log;
 
-import com.josiahebhomenye.raft.comand.Command;
 import lombok.SneakyThrows;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.LongStream;
+import java.util.Random;
 
-public class Log implements AutoCloseable{
+public class Log{
     private static final int INT_SIZE = 4;
     public static final int LONG_SIZE = 8;
     private static final int COMMAND_SIZE = INT_SIZE * 2;
@@ -49,9 +46,10 @@ public class Log implements AutoCloseable{
     }
 
     @SneakyThrows
-    @Override
     public void close(){
-        data.close();
+        try(RandomAccessFile rdf = data){
+            // use only to close
+        }
     }
 
     @SneakyThrows

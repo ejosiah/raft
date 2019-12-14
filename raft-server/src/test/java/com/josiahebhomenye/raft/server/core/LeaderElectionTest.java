@@ -3,6 +3,7 @@ package com.josiahebhomenye.raft.server.core;
 import com.josiahebhomenye.raft.AppendEntries;
 import com.josiahebhomenye.raft.RequestVote;
 import com.josiahebhomenye.raft.RequestVoteReply;
+import com.josiahebhomenye.raft.log.Log;
 import com.josiahebhomenye.raft.server.config.ElectionTimeout;
 import com.josiahebhomenye.raft.server.config.HeartbeatTimeout;
 import com.josiahebhomenye.raft.server.config.ServerConfig;
@@ -16,14 +17,12 @@ import lombok.SneakyThrows;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.*;
 import static com.josiahebhomenye.raft.server.core.NodeState.*;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.time.temporal.TemporalUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;

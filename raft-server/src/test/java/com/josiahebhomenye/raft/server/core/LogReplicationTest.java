@@ -1,7 +1,8 @@
 package com.josiahebhomenye.raft.server.core;
 
-import com.josiahebhomenye.raft.comand.Data;
 import com.josiahebhomenye.raft.comand.Set;
+import com.josiahebhomenye.raft.log.Log;
+import com.josiahebhomenye.raft.log.LogEntry;
 import com.josiahebhomenye.raft.server.config.ServerConfig;
 import com.josiahebhomenye.raft.server.event.CommitEvent;
 import com.josiahebhomenye.raft.server.event.StateTransitionEvent;
@@ -14,17 +15,13 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.*;
-import java.io.DataInputStream;
+
 import java.io.DataOutputStream;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 public class LogReplicationTest {
 
