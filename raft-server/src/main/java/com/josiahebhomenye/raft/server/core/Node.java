@@ -4,7 +4,6 @@ package com.josiahebhomenye.raft.server.core;
 import com.josiahebhomenye.raft.AppendEntries;
 import com.josiahebhomenye.raft.RequestVote;
 import com.josiahebhomenye.raft.StateManager;
-import com.josiahebhomenye.raft.comand.Command;
 import com.josiahebhomenye.raft.event.ApplyEntryEvent;
 import com.josiahebhomenye.raft.log.Log;
 import com.josiahebhomenye.raft.log.LogEntry;
@@ -30,7 +29,8 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static com.josiahebhomenye.raft.server.core.NodeState.*;
+import static com.josiahebhomenye.raft.server.core.NodeState.FOLLOWER;
+import static com.josiahebhomenye.raft.server.core.NodeState.NULL_STATE;
 
 @Getter
 public class Node extends ChannelDuplexHandler {
@@ -51,7 +51,7 @@ public class Node extends ChannelDuplexHandler {
     InetSocketAddress leaderId;
     int votes;
     ScheduledFuture<?> scheduledElectionTimeout;
-    StateManager<?> stateManager;
+    StateManager<?, ?> stateManager;
 
     List<ChannelDuplexHandler> preProcessInterceptors = new ArrayList<>();
     List<ChannelDuplexHandler> postProcessInterceptors = new ArrayList<>();
@@ -67,11 +67,11 @@ public class Node extends ChannelDuplexHandler {
         this.votes = 0;
         this.group = new NioEventLoopGroup();
         this.clientGroup = new NioEventLoopGroup(3);
-        this.stateManager = config.stateMgrClass.newInstance();
+        initStateManager();
         initStateData();
     }
 
-    void initStateData(){
+    private void initStateData(){
         try(DataInputStream in = new DataInputStream(new FileInputStream(config.statePath))){
             currentTerm = in.readLong();
             votedFor = (in.available() > 0) ? new InetSocketAddress(in.readUTF(), in.readInt()) : null;
@@ -79,9 +79,17 @@ public class Node extends ChannelDuplexHandler {
             currentTerm = 0;
             votedFor = null;
         }
-        log = new Log(config.logPath);
+        log = new Log(config.logPath, stateManager.entryDeserializer().entrySize());
         commitIndex = 0;
         lastApplied = 0;
+    }
+
+    @SneakyThrows
+    private void initStateManager(){
+        stateManager = config.stateMgrClass.newInstance();
+        if(config.deserializer != null){
+            stateManager.entryEntryDeserializer(config.deserializer.newInstance());
+        }
     }
 
     @SneakyThrows
@@ -246,8 +254,8 @@ public class Node extends ChannelDuplexHandler {
         return lastHeartbeat != null && heartbeat != null && heartbeat.isBefore(lastHeartbeat);
     }
 
-    public void add(Command command) {
-        log.add(new LogEntry(currentTerm, command), ++lastApplied);
+    public void add(byte[] entry) {
+        log.add(new LogEntry(currentTerm, entry), ++lastApplied);
     }
 
     public void replicate() {

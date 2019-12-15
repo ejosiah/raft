@@ -52,47 +52,47 @@ public class LogReplicationTest implements StateDataSupport {
     }
 
     void buildLogEntries(){
-        Log leaderLog = new Log("log.dat").clear();
-        Log follower0Log = new Log("log0.dat").clear();
-        Log follower1Log = new Log("log1.dat").clear();
-        Log follower2Log = new Log("log2.dat").clear();
-        Log follower3Log = new Log("log3.dat").clear();
+        Log leaderLog = new Log("log.dat", 8).clear();
+        Log follower0Log = new Log("log0.dat", 8).clear();
+        Log follower1Log = new Log("log1.dat", 8).clear();
+        Log follower2Log = new Log("log2.dat", 8).clear();
+        Log follower3Log = new Log("log3.dat", 8).clear();
 
-        leaderLog.add(new LogEntry(1, new Set(3)), 1);
-        leaderLog.add(new LogEntry(1, new Set(1)), 2);
-        leaderLog.add(new LogEntry(1, new Set(9)), 3);
-        leaderLog.add(new LogEntry(2, new Set(2)), 4);
-        leaderLog.add(new LogEntry(3, new Set(0)), 5);
-        leaderLog.add(new LogEntry(3, new Set(7)), 6);
-        leaderLog.add(new LogEntry(3, new Set(5)), 7);
-        leaderLog.add(new LogEntry(3, new Set(4)), 8);
+        leaderLog.add(new LogEntry(1, new Set(3).serialize()), 1);
+        leaderLog.add(new LogEntry(1, new Set(1).serialize()), 2);
+        leaderLog.add(new LogEntry(1, new Set(9).serialize()), 3);
+        leaderLog.add(new LogEntry(2, new Set(2).serialize()), 4);
+        leaderLog.add(new LogEntry(3, new Set(0).serialize()), 5);
+        leaderLog.add(new LogEntry(3, new Set(7).serialize()), 6);
+        leaderLog.add(new LogEntry(3, new Set(5).serialize()), 7);
+        leaderLog.add(new LogEntry(3, new Set(4).serialize()), 8);
 
-        follower0Log.add(new LogEntry(1, new Set(3)), 1);
-        follower0Log.add(new LogEntry(1, new Set(1)), 2);
-        follower0Log.add(new LogEntry(1, new Set(9)), 3);
-        follower0Log.add(new LogEntry(2, new Set(2)), 4);
-        follower0Log.add(new LogEntry(3, new Set(0)), 5);
+        follower0Log.add(new LogEntry(1, new Set(3).serialize()), 1);
+        follower0Log.add(new LogEntry(1, new Set(1).serialize()), 2);
+        follower0Log.add(new LogEntry(1, new Set(9).serialize()), 3);
+        follower0Log.add(new LogEntry(2, new Set(2).serialize()), 4);
+        follower0Log.add(new LogEntry(3, new Set(0).serialize()), 5);
 
 
-        follower1Log.add(new LogEntry(1, new Set(3)), 1);
-        follower1Log.add(new LogEntry(1, new Set(1)), 2);
-        follower1Log.add(new LogEntry(1, new Set(9)), 3);
-        follower1Log.add(new LogEntry(2, new Set(2)), 4);
-        follower1Log.add(new LogEntry(3, new Set(0)), 5);
-        follower1Log.add(new LogEntry(3, new Set(7)), 6);
-        follower1Log.add(new LogEntry(3, new Set(5)), 7);
-        follower1Log.add(new LogEntry(3, new Set(4)), 8);
+        follower1Log.add(new LogEntry(1, new Set(3).serialize()), 1);
+        follower1Log.add(new LogEntry(1, new Set(1).serialize()), 2);
+        follower1Log.add(new LogEntry(1, new Set(9).serialize()), 3);
+        follower1Log.add(new LogEntry(2, new Set(2).serialize()), 4);
+        follower1Log.add(new LogEntry(3, new Set(0).serialize()), 5);
+        follower1Log.add(new LogEntry(3, new Set(7).serialize()), 6);
+        follower1Log.add(new LogEntry(3, new Set(5).serialize()), 7);
+        follower1Log.add(new LogEntry(3, new Set(4).serialize()), 8);
 
-        follower2Log.add(new LogEntry(1, new Set(3)), 1);
-        follower2Log.add(new LogEntry(1, new Set(1)), 2);
+        follower2Log.add(new LogEntry(1, new Set(3).serialize()), 1);
+        follower2Log.add(new LogEntry(1, new Set(1).serialize()), 2);
 
-        follower3Log.add(new LogEntry(1, new Set(3)), 1);
-        follower3Log.add(new LogEntry(1, new Set(1)), 2);
-        follower3Log.add(new LogEntry(1, new Set(9)), 3);
-        follower3Log.add(new LogEntry(2, new Set(2)), 4);
-        follower3Log.add(new LogEntry(3, new Set(0)), 5);
-        follower3Log.add(new LogEntry(3, new Set(7)), 6);
-        follower3Log.add(new LogEntry(3, new Set(5)), 7);
+        follower3Log.add(new LogEntry(1, new Set(3).serialize()), 1);
+        follower3Log.add(new LogEntry(1, new Set(1).serialize()), 2);
+        follower3Log.add(new LogEntry(1, new Set(9).serialize()), 3);
+        follower3Log.add(new LogEntry(2, new Set(2).serialize()), 4);
+        follower3Log.add(new LogEntry(3, new Set(0).serialize()), 5);
+        follower3Log.add(new LogEntry(3, new Set(7).serialize()), 6);
+        follower3Log.add(new LogEntry(3, new Set(5).serialize()), 7);
 
         leaderLog.close();
         follower0Log.close();

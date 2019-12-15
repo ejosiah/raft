@@ -4,17 +4,32 @@ import com.josiahebhomenye.raft.event.StateUpdatedEvent;
 import com.josiahebhomenye.raft.event.ApplyEntryEvent;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.Accessors;
 
-public abstract class StateManager<STATE> extends ChannelDuplexHandler{
+@NoArgsConstructor
+@Accessors(fluent = true)
+public abstract class StateManager<ENTRY, STATE> extends ChannelDuplexHandler{
 
     protected STATE state;
 
-    public StateManager(){
-        state = null;
+    @Getter
+    protected EntryDeserializer<ENTRY> entryDeserializer;
+
+    public StateManager(EntryDeserializer<ENTRY> entryDeserializer){
+        this(entryDeserializer, null);
     }
 
-    public StateManager(STATE state) {
+    public StateManager(EntryDeserializer<ENTRY> entryDeserializer, STATE state) {
+        this.entryDeserializer = entryDeserializer;
         this.state = state;
+    }
+
+    @SuppressWarnings("unchecked")
+    public void entryEntryDeserializer(EntryDeserializer<?> entryDeserializer){
+        this.entryDeserializer = (EntryDeserializer<ENTRY> )entryDeserializer;
     }
 
     abstract STATE handle(ApplyEntryEvent event);

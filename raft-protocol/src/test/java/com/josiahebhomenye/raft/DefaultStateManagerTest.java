@@ -1,5 +1,6 @@
 package com.josiahebhomenye.raft;
 
+import com.josiahebhomenye.raft.comand.Command;
 import com.josiahebhomenye.raft.comand.Data;
 import com.josiahebhomenye.raft.event.StateUpdatedEvent;
 import com.josiahebhomenye.raft.event.ApplyEntryEvent;
@@ -39,7 +40,7 @@ public class DefaultStateManagerTest implements LogDomainSupport, StateDataSuppo
 
     @Test
     public void update_state_when_update_state_event_received(){
-        Log log = new Log("log.dat");
+        Log log = new Log("log.dat", Command.SIZE);
         List<LogEntry> entries = logEntries();
 
         IntStream.rangeClosed(1, entries.size()).forEach(i -> log.add(entries.get(i-1), i));
@@ -54,7 +55,7 @@ public class DefaultStateManagerTest implements LogDomainSupport, StateDataSuppo
         for(int i = 0; i < entries.size(); i++){
             StateUpdatedEvent event = userEventCapture.get(i);
 
-            entries.get(i).getCommand().apply(expected);
+            Command.restore(entries.get(i).getCommand()).apply(expected);
             Data actual = event.state();
 
             assertEquals(String.format("updated state(%s) does not match expected", i), expected, actual);

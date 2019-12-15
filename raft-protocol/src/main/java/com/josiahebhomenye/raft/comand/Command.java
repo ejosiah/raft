@@ -20,6 +20,7 @@ public abstract class Command {
     public static final int SUBTRACT = 1 << 2;
     public static final int MULTIPLY = 1 << 3;
     public static final int DIVIDE = 1 << 4;
+    public static final int SIZE = 8;
 
     public abstract void apply(Data data);
 

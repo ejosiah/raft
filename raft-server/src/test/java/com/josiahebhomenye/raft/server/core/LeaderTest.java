@@ -43,7 +43,7 @@ public class LeaderTest extends NodeStateTest {
     public void acknowledge_client_command_request_and_replicate_to_followers() {
         node.currentTerm = 1;
         node.id = leaderId;
-        Command command = new Set(5);
+        byte[] command = new Set(5).serialize();
         ReceivedCommandEvent event = new ReceivedCommandEvent(command, channel);
 
         peers.forEach(peer -> node.handle(new PeerConnectedEvent(peer)));
@@ -66,16 +66,16 @@ public class LeaderTest extends NodeStateTest {
     @Test
     public void commit_log_on_majority_replication(){
         node.currentTerm = 3;
-        node.log.add(new LogEntry(1, new Set(3)), 1);
-        node.log.add(new LogEntry(1, new Set(1)), 2);
-        node.log.add(new LogEntry(1, new Set(9)), 3);
+        node.log.add(new LogEntry(1, new Set(3).serialize()), 1);
+        node.log.add(new LogEntry(1, new Set(1).serialize()), 2);
+        node.log.add(new LogEntry(1, new Set(9).serialize()), 3);
 
-        node.log.add(new LogEntry(2, new Set(2)), 4);
+        node.log.add(new LogEntry(2, new Set(2).serialize()), 4);
 
-        node.log.add(new LogEntry(3, new Set(0)), 5);
-        node.log.add(new LogEntry(3, new Set(7)), 6);
-        node.log.add(new LogEntry(3, new Set(5)), 7);
-        node.log.add(new LogEntry(3, new Set(4)), 8);
+        node.log.add(new LogEntry(3, new Set(0).serialize()), 5);
+        node.log.add(new LogEntry(3, new Set(7).serialize()), 6);
+        node.log.add(new LogEntry(3, new Set(5).serialize()), 7);
+        node.log.add(new LogEntry(3, new Set(4).serialize()), 8);
 
         peers.forEach(peer -> node.handle(new PeerConnectedEvent(peer)));
 
@@ -113,16 +113,16 @@ public class LeaderTest extends NodeStateTest {
         node.id = leaderId;
 
 
-        node.log.add(new LogEntry(1, new Set(3)), 1);
-        node.log.add(new LogEntry(1, new Set(1)), 2);
-        node.log.add(new LogEntry(1, new Set(9)), 3);
+        node.log.add(new LogEntry(1, new Set(3).serialize()), 1);
+        node.log.add(new LogEntry(1, new Set(1).serialize()), 2);
+        node.log.add(new LogEntry(1, new Set(9).serialize()), 3);
 
-        node.log.add(new LogEntry(2, new Set(2)), 4);
+        node.log.add(new LogEntry(2, new Set(2).serialize()), 4);
 
-        node.log.add(new LogEntry(3, new Set(0)), 5);
-        node.log.add(new LogEntry(3, new Set(7)), 6);
-        node.log.add(new LogEntry(3, new Set(5)), 7);
-        node.log.add(new LogEntry(3, new Set(4)), 8);
+        node.log.add(new LogEntry(3, new Set(0).serialize()), 5);
+        node.log.add(new LogEntry(3, new Set(7).serialize()), 6);
+        node.log.add(new LogEntry(3, new Set(5).serialize()), 7);
+        node.log.add(new LogEntry(3, new Set(4).serialize()), 8);
 
         peers.forEach(peer -> node.handle(new PeerConnectedEvent(peer)));
 
@@ -133,7 +133,7 @@ public class LeaderTest extends NodeStateTest {
         leader.handle(event);
 
         List<byte[]> missingEntries = new ArrayList<>();
-        missingEntries.add(new LogEntry(3, new Set(4)).serialize());
+        missingEntries.add(new LogEntry(3, new Set(4).serialize()).serialize());
 
         AppendEntries expected = new AppendEntries(3, 7, 3, 0, leaderId, missingEntries);
         AppendEntries actual = channel.readOutbound();
