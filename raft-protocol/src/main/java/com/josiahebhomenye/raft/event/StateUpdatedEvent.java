@@ -9,7 +9,6 @@ import java.net.SocketAddress;
 
 @Data
 @NoArgsConstructor
-@Accessors(fluent = true)
 @EqualsAndHashCode(callSuper=false)
 public class StateUpdatedEvent extends Event {
     private Object state;
@@ -17,5 +16,10 @@ public class StateUpdatedEvent extends Event {
     public StateUpdatedEvent(Object state, SocketAddress source){
         super(source);
         this.state = state;
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> T state(){
+        return (T)state;
     }
 }

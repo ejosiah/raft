@@ -3,8 +3,9 @@ package com.josiahebhomenye.raft.server.core;
 
 import com.josiahebhomenye.raft.AppendEntries;
 import com.josiahebhomenye.raft.RequestVote;
+import com.josiahebhomenye.raft.StateManager;
 import com.josiahebhomenye.raft.comand.Command;
-import com.josiahebhomenye.raft.comand.Data;
+import com.josiahebhomenye.raft.event.ApplyEntryEvent;
 import com.josiahebhomenye.raft.log.Log;
 import com.josiahebhomenye.raft.log.LogEntry;
 import com.josiahebhomenye.raft.server.config.ServerConfig;
@@ -50,11 +51,12 @@ public class Node extends ChannelDuplexHandler {
     InetSocketAddress leaderId;
     int votes;
     ScheduledFuture<?> scheduledElectionTimeout;
-    Data data = new Data(0);
+    StateManager<?> stateManager;
 
     List<ChannelDuplexHandler> preProcessInterceptors = new ArrayList<>();
     List<ChannelDuplexHandler> postProcessInterceptors = new ArrayList<>();
 
+    @SneakyThrows
     public Node(ServerConfig config){
         this.state = NULL_STATE();
         this.state.set(this);
@@ -62,9 +64,10 @@ public class Node extends ChannelDuplexHandler {
         this.id = config.id;
         this.activePeers = new HashMap<>();
         this.peers = new ArrayList<>();
-        votes = 0;
-        group = new NioEventLoopGroup();
-        clientGroup = new NioEventLoopGroup(3);
+        this.votes = 0;
+        this.group = new NioEventLoopGroup();
+        this.clientGroup = new NioEventLoopGroup(3);
+        this.stateManager = config.stateMgrClass.newInstance();
         initStateData();
     }
 
@@ -176,7 +179,7 @@ public class Node extends ChannelDuplexHandler {
 
     public void handle(CommitEvent event){
         commitIndex = event.index();
-        updateState();
+        applyLogEntries();
     }
 
     public void handle(PeerDisconnectedEvent event) {
@@ -192,11 +195,11 @@ public class Node extends ChannelDuplexHandler {
         activePeers.values().forEach( peer -> peer.trigger(event));
     }
 
-    public void updateState(){
+    public void applyLogEntries(){
         while(commitIndex > lastApplied){
             lastApplied++;
-            Command command = log.get(lastApplied).getCommand();
-            command.apply(data);
+            LogEntry entry = log.get(lastApplied);
+            trigger(new ApplyEntryEvent(entry, id));
         }
     }
 

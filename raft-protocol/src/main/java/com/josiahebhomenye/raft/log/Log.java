@@ -3,10 +3,11 @@ package com.josiahebhomenye.raft.log;
 import lombok.SneakyThrows;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
-public class Log implements AutoCloseable{
+public class Log implements AutoCloseable, Iterable<LogEntry>{
     private static final int INT_SIZE = 4;
     public static final int LONG_SIZE = 8;
     private static final int COMMAND_SIZE = INT_SIZE * 2;
@@ -116,5 +117,23 @@ public class Log implements AutoCloseable{
             if(log.data.read() != data.read()) return false;
         }
         return true;
+    }
+
+    @Override
+    @SneakyThrows
+    public Iterator<LogEntry> iterator() {
+        return new Iterator<LogEntry>() {
+            final long size = size();
+            long nextIndex = 0;
+            @Override
+            public boolean hasNext() {
+                return nextIndex < size;
+            }
+
+            @Override
+            public LogEntry next() {
+                return get(++nextIndex);
+            }
+        };
     }
 }

@@ -1,6 +1,7 @@
 package com.josiahebhomenye.raft.event;
 
 import com.josiahebhomenye.raft.log.Log;
+import com.josiahebhomenye.raft.log.LogEntry;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -12,11 +13,11 @@ import java.net.SocketAddress;
 @NoArgsConstructor
 @Accessors(fluent = true)
 @EqualsAndHashCode(callSuper=false)
-public class UpdateStateEvent extends Event {
-    private Log log;
+public class ApplyEntryEvent extends Event {
+    private LogEntry entry;
 
-    UpdateStateEvent(Log log, SocketAddress source){
+    public ApplyEntryEvent(LogEntry entry, SocketAddress source){
         super(source);
-        this.log = log;
+        this.entry = entry;
     }
 }

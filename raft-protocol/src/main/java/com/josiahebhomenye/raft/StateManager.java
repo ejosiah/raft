@@ -1,13 +1,13 @@
 package com.josiahebhomenye.raft;
 
 import com.josiahebhomenye.raft.event.StateUpdatedEvent;
-import com.josiahebhomenye.raft.event.UpdateStateEvent;
+import com.josiahebhomenye.raft.event.ApplyEntryEvent;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 
 public abstract class StateManager<STATE> extends ChannelDuplexHandler{
 
-    private STATE state;
+    protected STATE state;
 
     public StateManager(){
         state = null;
@@ -17,12 +17,12 @@ public abstract class StateManager<STATE> extends ChannelDuplexHandler{
         this.state = state;
     }
 
-    abstract STATE handle(UpdateStateEvent event);
+    abstract STATE handle(ApplyEntryEvent event);
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-        if(evt instanceof UpdateStateEvent){
-            STATE state = handle((UpdateStateEvent)evt);
+        if(evt instanceof ApplyEntryEvent){
+            STATE state = handle((ApplyEntryEvent)evt);
             ctx.pipeline().fireUserEventTriggered(new StateUpdatedEvent(state, ctx.channel().localAddress()));
         }
         ctx.fireUserEventTriggered(evt);

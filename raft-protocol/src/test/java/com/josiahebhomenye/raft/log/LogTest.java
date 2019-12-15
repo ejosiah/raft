@@ -1,17 +1,12 @@
 package com.josiahebhomenye.raft.log;
 
-import com.josiahebhomenye.raft.Divide;
-import com.josiahebhomenye.raft.comand.Add;
-import com.josiahebhomenye.raft.comand.Multiply;
-import com.josiahebhomenye.raft.comand.Set;
-import com.josiahebhomenye.raft.comand.Subtract;
+import com.josiahebhomenye.test.support.LogDomainSupport;
 import com.josiahebhomenye.test.support.StateDataSupport;
 import lombok.SneakyThrows;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
@@ -19,20 +14,9 @@ import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertEquals;
 
-public class LogTest implements StateDataSupport {
+public class LogTest implements StateDataSupport, LogDomainSupport {
 
     Log log;
-
-    LinkedList<LogEntry> logEntries = new LinkedList<LogEntry>(){
-        {
-            add(new LogEntry(1, new Set(0)));
-            add(new LogEntry(1, new Add(5)));
-            add(new LogEntry(1, new Add(3)));
-            add(new LogEntry(1, new Subtract(1)));
-            add(new LogEntry(1, new Multiply(10)));
-            add(new LogEntry(1, new Divide(2)));
-        }
-    };
 
     @Before
     public void setup(){
@@ -49,31 +33,31 @@ public class LogTest implements StateDataSupport {
     @Test
     public void check_that_we_can_read_and_write_to_log(){
 
-        IntStream.range(0, logEntries.size()).forEach(i -> log.add(logEntries.get(i), i+1));
-        IntStream.range(0, logEntries.size()).forEach(i -> assertEquals(log.get(i+1), logEntries.get(i)));
+        IntStream.range(0, logEntries().size()).forEach(i -> log.add(logEntries().get(i), i+1));
+        IntStream.range(0, logEntries().size()).forEach(i -> assertEquals(log.get(i+1), logEntries().get(i)));
     }
 
     @Test
     public void check_that_can_read_and_write_to_random_points_in_the_log(){
-        IntStream.range(1, logEntries.size()).forEach(i -> {
+        IntStream.range(1, logEntries().size()).forEach(i -> {
             int id = new Random().nextInt(100);
-            log.add(logEntries.get(i), id+1);
-            assertEquals(log.get(id+1), logEntries.get(i));
+            log.add(logEntries().get(i), id+1);
+            assertEquals(log.get(id+1), logEntries().get(i));
         });
     }
 
     @Test
     public void check_that_we_can_retrieve_last_entry(){
-        IntStream.range(0, logEntries.size()).forEach(i -> log.add(logEntries.get(i), i+1));
+        IntStream.range(0, logEntries().size()).forEach(i -> log.add(logEntries().get(i), i+1));
 
-        assertEquals(logEntries.getLast(), log.lastEntry());
+        assertEquals(logEntries().getLast(), log.lastEntry());
     }
 
     @Test
     public void check_that_we_can_retrieve_index_of_last_entry(){
-        IntStream.range(0, logEntries.size()).forEach(i -> log.add(logEntries.get(i), i+1));
+        IntStream.range(0, logEntries().size()).forEach(i -> log.add(logEntries().get(i), i+1));
 
-        assertEquals(logEntries.size(), log.getLastIndex());
+        assertEquals(logEntries().size(), log.getLastIndex());
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -83,32 +67,32 @@ public class LogTest implements StateDataSupport {
 
     @Test(expected = IllegalArgumentException.class)
     public void negative_indexes_should_fail(){
-        log.add(logEntries.get(0), -1);
+        log.add(logEntries().get(0), -1);
     }
 
     @Test
     public void delete_entries_from_giving_index(){
-        IntStream.range(0, logEntries.size()).forEach(i -> log.add(logEntries.get(i), i+1));
+        IntStream.range(0, logEntries().size()).forEach(i -> log.add(logEntries().get(i), i+1));
 
         log.deleteFromIndex(4);
         assertEquals(3, log.size());
-        IntStream.range(0, 3).forEach(i -> assertEquals( logEntries.get(i), log.get(i+1)) );
+        IntStream.range(0, 3).forEach(i -> assertEquals( logEntries().get(i), log.get(i+1)) );
     }
 
     @Test
     public void delete_of_index_above_size_of_log_does_nothing(){
-        IntStream.range(0, logEntries.size()).forEach(i -> log.add(logEntries.get(i), i+1));
+        IntStream.range(0, logEntries().size()).forEach(i -> log.add(logEntries().get(i), i+1));
 
         log.deleteFromIndex(8);
-        assertEquals(logEntries.size(), log.size());
-        IntStream.range(0, logEntries.size()).forEach(i -> assertEquals( logEntries.get(i), log.get(i+1)) );
+        assertEquals(logEntries().size(), log.size());
+        IntStream.range(0, logEntries().size()).forEach(i -> assertEquals( logEntries().get(i), log.get(i+1)) );
     }
 
     @Test
     public void retrieve_entries_from_a_giving_index(){
-        IntStream.range(0, logEntries.size()).forEach(i -> log.add(logEntries.get(i), i+1));
+        IntStream.range(0, logEntries().size()).forEach(i -> log.add(logEntries().get(i), i+1));
 
-        List<LogEntry> expected = logEntries.stream().skip(2).collect(Collectors.toList());
+        List<LogEntry> expected = logEntries().stream().skip(2).collect(Collectors.toList());
         List<LogEntry> actual = log.entriesFrom(3);
 
         assertEquals(expected, actual);
