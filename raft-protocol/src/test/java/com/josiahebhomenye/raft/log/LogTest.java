@@ -1,13 +1,13 @@
-package com.josiahebhomenye.raft.server.core;
+package com.josiahebhomenye.raft.log;
 
 import com.josiahebhomenye.raft.Divide;
 import com.josiahebhomenye.raft.comand.*;
-import com.josiahebhomenye.raft.log.Log;
-import com.josiahebhomenye.raft.log.LogEntry;
 import lombok.SneakyThrows;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
@@ -17,6 +17,8 @@ import java.util.stream.IntStream;
 import static org.junit.Assert.*;
 
 public class LogTest {
+
+    Log log;
 
     LinkedList<LogEntry> logEntries = new LinkedList<LogEntry>(){
         {
@@ -30,14 +32,23 @@ public class LogTest {
     };
 
     @Before
-    @SneakyThrows
     public void setup(){
-        new Log("log.dat").clear();
+        log = new Log("log.dat");
+    }
+
+    @After
+    @SneakyThrows
+    public void tearDown(){
+        log.close();
+        deleteState();
+    }
+
+    private void deleteState() {
+        new File("log.dat").delete();
     }
 
     @Test
     public void check_that_we_can_read_and_write_to_log(){
-        Log log = new Log("log.dat");
 
         IntStream.range(0, logEntries.size()).forEach(i -> log.add(logEntries.get(i), i+1));
         IntStream.range(0, logEntries.size()).forEach(i -> assertEquals(log.get(i+1), logEntries.get(i)));
@@ -45,7 +56,6 @@ public class LogTest {
 
     @Test
     public void check_that_can_read_and_write_to_random_points_in_the_log(){
-        Log log = new Log("log.dat");
         IntStream.range(1, logEntries.size()).forEach(i -> {
             int id = new Random().nextInt(100);
             log.add(logEntries.get(i), id+1);
@@ -55,7 +65,6 @@ public class LogTest {
 
     @Test
     public void check_that_we_can_retrieve_last_entry(){
-        Log log = new Log("log.dat");
         IntStream.range(0, logEntries.size()).forEach(i -> log.add(logEntries.get(i), i+1));
 
         assertEquals(logEntries.getLast(), log.lastEntry());
@@ -63,7 +72,6 @@ public class LogTest {
 
     @Test
     public void check_that_we_can_retrieve_index_of_last_entry(){
-        Log log = new Log("log.dat");
         IntStream.range(0, logEntries.size()).forEach(i -> log.add(logEntries.get(i), i+1));
 
         assertEquals(logEntries.size(), log.getLastIndex());
@@ -71,19 +79,16 @@ public class LogTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void null_command_should_throw_fail(){
-        Log log = new Log("log.dat");
         log.add(null, 0);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void negative_indexes_should_fail(){
-        Log log = new Log("log.dat");
         log.add(logEntries.get(0), -1);
     }
 
     @Test
     public void delete_entries_from_giving_index(){
-        Log log = new Log("log.dat");
         IntStream.range(0, logEntries.size()).forEach(i -> log.add(logEntries.get(i), i+1));
 
         log.deleteFromIndex(4);
@@ -93,7 +98,6 @@ public class LogTest {
 
     @Test
     public void delete_of_index_above_size_of_log_does_nothing(){
-        Log log = new Log("log.dat");
         IntStream.range(0, logEntries.size()).forEach(i -> log.add(logEntries.get(i), i+1));
 
         log.deleteFromIndex(8);
@@ -103,7 +107,6 @@ public class LogTest {
 
     @Test
     public void retrieve_entries_from_a_giving_index(){
-        Log log = new Log("log.dat");
         IntStream.range(0, logEntries.size()).forEach(i -> log.add(logEntries.get(i), i+1));
 
         List<LogEntry> expected = logEntries.stream().skip(2).collect(Collectors.toList());

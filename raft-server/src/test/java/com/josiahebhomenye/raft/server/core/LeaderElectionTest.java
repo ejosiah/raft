@@ -8,10 +8,7 @@ import com.josiahebhomenye.raft.server.config.ElectionTimeout;
 import com.josiahebhomenye.raft.server.config.HeartbeatTimeout;
 import com.josiahebhomenye.raft.server.config.ServerConfig;
 import com.josiahebhomenye.raft.server.event.*;
-import com.josiahebhomenye.raft.server.support.NodeWaitLatch;
-import com.josiahebhomenye.raft.server.support.PreElectionSetup;
-import com.josiahebhomenye.raft.server.support.RemotePeerMock;
-import com.josiahebhomenye.raft.server.support.RequestRequestVoteForCount;
+import com.josiahebhomenye.raft.server.support.*;
 import com.typesafe.config.ConfigFactory;
 import lombok.SneakyThrows;
 import org.junit.After;
@@ -29,7 +26,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 // FIXME move to integration folder and run independently of unit test
-public class LeaderElectionTest {
+public class LeaderElectionTest implements StateDataSupport {
 
     UserEventCapture userEventCapture = new UserEventCapture();
     List<RemotePeerMock> peers = new ArrayList<>();
@@ -45,7 +42,6 @@ public class LeaderElectionTest {
     public void setup(){
         config = config.withElectionTimeout(electionTimeout).withHeartbeatTimeout(heartbeatTimeout);
 
-        try(Log log = new Log(config.logPath)){ log.clear(); }catch (Exception ex){} // FIXME do this inside log.clea()
         testLatch = new CountDownLatch(1);
         nodeLatch = new CountDownLatch(1);
         userEventCapture.ignore(PeerConnectedEvent.class, AppendEntriesEvent.class, RequestVoteReplyEvent.class);
@@ -59,6 +55,7 @@ public class LeaderElectionTest {
         peers.forEach(RemotePeerMock::stop);
         nodeLatch.countDown();
         node.stop();
+        deleteState();
         node = null;
     }
 

@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-public class Log{
+public class Log implements AutoCloseable{
     private static final int INT_SIZE = 4;
     public static final int LONG_SIZE = 8;
     private static final int COMMAND_SIZE = INT_SIZE * 2;
@@ -45,6 +45,7 @@ public class Log{
         return (index-1) * SIZE_OFFSET;
     }
 
+    @Override
     @SneakyThrows
     public void close(){
         try(RandomAccessFile rdf = data){

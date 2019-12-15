@@ -5,6 +5,7 @@ import com.josiahebhomenye.raft.RequestVote;
 import com.josiahebhomenye.raft.server.config.ElectionTimeout;
 import com.josiahebhomenye.raft.server.config.ServerConfig;
 import com.josiahebhomenye.raft.server.event.*;
+import com.josiahebhomenye.raft.server.support.StateDataSupport;
 import com.typesafe.config.ConfigFactory;
 import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
@@ -24,7 +25,7 @@ import java.util.List;
 import static com.josiahebhomenye.raft.server.core.NodeState.*;
 import static org.junit.Assert.*;
 
-public abstract class NodeStateTest {
+public abstract class NodeStateTest implements StateDataSupport {
 
     EventLoopGroup group;
     UserEventCapture userEventCapture;
@@ -71,6 +72,7 @@ public abstract class NodeStateTest {
     @After
     public void tearDown0(){
         node.stop();
+        deleteState();
     }
 
     @Test

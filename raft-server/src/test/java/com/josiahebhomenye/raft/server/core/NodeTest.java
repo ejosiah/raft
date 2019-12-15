@@ -7,6 +7,7 @@ import com.josiahebhomenye.raft.server.config.ServerConfig;
 import com.josiahebhomenye.raft.server.event.PeerConnectedEvent;
 import com.josiahebhomenye.raft.server.event.PeerDisconnectedEvent;
 import com.josiahebhomenye.raft.server.event.ConnectPeerEvent;
+import com.josiahebhomenye.raft.server.support.StateDataSupport;
 import com.typesafe.config.ConfigFactory;
 import io.netty.channel.embedded.EmbeddedChannel;
 import lombok.SneakyThrows;
@@ -23,7 +24,7 @@ import java.nio.file.Paths;
 import java.util.function.Supplier;
 import static org.junit.Assert.*;
 
-public class NodeTest {
+public class NodeTest implements StateDataSupport {
 
     Node node;
     ServerConfig config;
@@ -46,6 +47,7 @@ public class NodeTest {
     @After
     public void tearDown(){
         node.stop();
+        deleteState();
     }
 
     private void initializeNode(){
