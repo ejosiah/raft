@@ -6,6 +6,9 @@ plugins {
 sourceCompatibility = 1.8
 
 dependencies {
+
+    compile project(":test-support")
+
     compile group: 'org.projectlombok', name: 'lombok', version: '1.18.10'
 
     compile group: 'io.netty', name: 'netty-all', version: '4.1.43.Final'

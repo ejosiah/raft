@@ -1,22 +1,25 @@
 package com.josiahebhomenye.raft.log;
 
 import com.josiahebhomenye.raft.Divide;
-import com.josiahebhomenye.raft.comand.*;
+import com.josiahebhomenye.raft.comand.Add;
+import com.josiahebhomenye.raft.comand.Multiply;
+import com.josiahebhomenye.raft.comand.Set;
+import com.josiahebhomenye.raft.comand.Subtract;
+import com.josiahebhomenye.test.support.StateDataSupport;
 import lombok.SneakyThrows;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.File;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
-public class LogTest {
+public class LogTest implements StateDataSupport {
 
     Log log;
 
@@ -41,10 +44,6 @@ public class LogTest {
     public void tearDown(){
         log.close();
         deleteState();
-    }
-
-    private void deleteState() {
-        new File("log.dat").delete();
     }
 
     @Test

@@ -7,7 +7,7 @@ import com.josiahebhomenye.raft.server.config.ServerConfig;
 import com.josiahebhomenye.raft.server.event.CommitEvent;
 import com.josiahebhomenye.raft.server.event.StateTransitionEvent;
 import com.josiahebhomenye.raft.server.support.ForceLeader;
-import com.josiahebhomenye.raft.server.support.StateDataSupport;
+import com.josiahebhomenye.test.support.StateDataSupport;
 import com.typesafe.config.ConfigFactory;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -194,10 +194,10 @@ public class LogReplicationTest implements StateDataSupport {
        testEndLatch.await();
        Thread.sleep(2000);  // wait a little bit for logs to flush to disk
 
-        assertEquals(leader.log, follower0.log);
-        assertEquals(leader.log, follower1.log);
-        assertEquals(leader.log, follower2.log);
-        assertEquals(leader.log, follower3.log);
+        assertEquals("follower0's log not in sync with leader's", leader.log, follower0.log);
+        assertEquals("follower0's log not in sync with leader's", leader.log, follower1.log);
+        assertEquals("follower0's log not in sync with leader's", leader.log, follower2.log);
+        assertEquals("follower0's log not in sync with leader's", leader.log, follower3.log);
     }
 
     @ChannelHandler.Sharable

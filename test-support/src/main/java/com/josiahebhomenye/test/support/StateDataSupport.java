@@ -1,4 +1,4 @@
-package com.josiahebhomenye.raft.server.support;
+package com.josiahebhomenye.test.support;
 
 import lombok.SneakyThrows;
 

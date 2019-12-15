@@ -1,3 +1,6 @@
 rootProject.name = 'raft'
 include 'raft-server'
 include 'raft-protocol'
+include 'test-support'
+include 'raft-client'
+

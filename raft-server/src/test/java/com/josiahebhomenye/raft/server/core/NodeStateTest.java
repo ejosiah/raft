@@ -5,7 +5,9 @@ import com.josiahebhomenye.raft.RequestVote;
 import com.josiahebhomenye.raft.server.config.ElectionTimeout;
 import com.josiahebhomenye.raft.server.config.ServerConfig;
 import com.josiahebhomenye.raft.server.event.*;
-import com.josiahebhomenye.raft.server.support.StateDataSupport;
+
+import com.josiahebhomenye.test.support.StateDataSupport;
+import com.josiahebhomenye.test.support.UserEventCapture;
 import com.typesafe.config.ConfigFactory;
 import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;

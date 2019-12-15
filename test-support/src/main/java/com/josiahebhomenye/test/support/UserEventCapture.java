@@ -1,12 +1,7 @@
-package com.josiahebhomenye.raft.server.core;
+package com.josiahebhomenye.test.support;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.josiahebhomenye.raft.server.event.AppendEntriesEvent;
-import com.josiahebhomenye.raft.server.event.CancelHeartbeatTimeoutEvent;
-import com.josiahebhomenye.raft.server.event.StateTransitionEvent;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -19,7 +14,7 @@ public class UserEventCapture extends ChannelDuplexHandler {
     private List<Class<?>> ignoreList = new ArrayList<>();
 
     @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
         if(!ignore(evt)) {
             events.add(evt);
         }
