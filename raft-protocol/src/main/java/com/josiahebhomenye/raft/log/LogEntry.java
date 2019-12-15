@@ -1,6 +1,5 @@
 package com.josiahebhomenye.raft.log;
 
-import com.josiahebhomenye.raft.comand.Command;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import lombok.Value;
@@ -8,11 +7,10 @@ import lombok.Value;
 @Value
 public class LogEntry {
     private long term;
-    private Command command;
+    private byte[] command;
 
     public byte[] serialize(){
         ByteBuf buf = Unpooled.buffer();
-        byte[] command = this.command.serialize();
         buf.writeLong(term);
         buf.writeBytes(command);
 
@@ -26,9 +24,8 @@ public class LogEntry {
         ByteBuf buf = Unpooled.wrappedBuffer(entry);
 
         long term = buf.readLong();
-        byte[] data = new byte[buf.readableBytes()];
-        buf.readBytes(data);
-        Command command = Command.restore(data);
+        byte[] command = new byte[buf.readableBytes()];
+        buf.readBytes(command);
         return new LogEntry(term, command);
     }
 }

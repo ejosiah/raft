@@ -43,10 +43,10 @@ public class FollowerTest extends NodeStateTest{
     public void reply_false_to_append_entry_message_if_log_does_not_contain_an_entry_with_previous_log_term(){
         node.currentTerm = 4;
 
-        node.log.add(new LogEntry(1, new Set(5)), 1);
-        node.log.add(new LogEntry(2, new Add(1)), 2);
-        node.log.add(new LogEntry(2, new Set(3)), 3);
-        node.log.add(new LogEntry(3, new Set(2)), 4);
+        node.log.add(new LogEntry(1, new Set(5).serialize()), 1);
+        node.log.add(new LogEntry(2, new Add(1).serialize()), 2);
+        node.log.add(new LogEntry(2, new Set(1).serialize()), 3);
+        node.log.add(new LogEntry(3, new Set(2).serialize()), 4);
 
         AppendEntries entries = AppendEntries.heartbeat(node.currentTerm, 3, 3, 0, leaderId);
 
@@ -66,16 +66,16 @@ public class FollowerTest extends NodeStateTest{
         long prevLogIndex = 3;
         long prevLogTerm = 2;
 
-        LogEntry conflictingEntry = new LogEntry(2, new Set(2));
+        LogEntry conflictingEntry = new LogEntry(2, new Set(2).serialize());
 
-        node.log.add(new LogEntry(1, new Set(5)), 1);
-        node.log.add(new LogEntry(2, new Add(1)), 2);
-        node.log.add(new LogEntry(2, new Set(3)), 3);
+        node.log.add(new LogEntry(1, new Set(5).serialize()), 1);
+        node.log.add(new LogEntry(2, new Add(1).serialize()), 2);
+        node.log.add(new LogEntry(2, new Set(1).serialize()), 3);
         node.log.add(conflictingEntry, 4);
-        node.log.add(new LogEntry(2, new Add(1)), 5);
+        node.log.add(new LogEntry(2, new Add(1).serialize()), 5);
 
         List<byte[]> entries = new ArrayList<>();
-        entries.add(new LogEntry(3, new Add(3)).serialize());
+        entries.add(new LogEntry(3, new Add(3).serialize()).serialize());
 
         AppendEntries appendEntries = new AppendEntries(leaderTerm, prevLogIndex, prevLogTerm, leaderCommit, leaderId, entries);
 
@@ -83,7 +83,7 @@ public class FollowerTest extends NodeStateTest{
 
         assertEquals(4, node.log.size());
         assertNotEquals(conflictingEntry, node.log.get(4)); // conflicting entry removed
-        assertEquals(new LogEntry(3, new Add(3)), node.log.lastEntry()); // and replaced with entry from leader
+        assertEquals(new LogEntry(3, new Add(3).serialize()), node.log.lastEntry()); // and replaced with entry from leader
 
         CommitEvent expectedCommitEvent = new CommitEvent(leaderCommit, node.id);
 
@@ -183,10 +183,10 @@ public class FollowerTest extends NodeStateTest{
         Peer peer = new Peer(rquestorId, node, group);
         peer.channel = channel;
         node.activePeers.put(rquestorId, peer);
-        node.log.add(new LogEntry(1, new Set(5)), 1);
-        node.log.add(new LogEntry(2, new Add(2)), 2);
-        node.log.add(new LogEntry(3, new Multiply(3)), 3);
-        node.log.add(new LogEntry(3, new Subtract(1)), 4);
+        node.log.add(new LogEntry(1, new Set(5).serialize()), 1);
+        node.log.add(new LogEntry(2, new Add(2).serialize()), 2);
+        node.log.add(new LogEntry(3, new Multiply(3).serialize()), 3);
+        node.log.add(new LogEntry(3, new Subtract(1).serialize()), 4);
 
         RequestVote req = new RequestVote(3, 3, 1, rquestorId);
         RequestVoteEvent event = new RequestVoteEvent(req, channel);
@@ -206,10 +206,10 @@ public class FollowerTest extends NodeStateTest{
         Peer peer = new Peer(rquestorId, node, group);
         peer.channel = channel;
         node.activePeers.put(rquestorId, peer);
-        node.log.add(new LogEntry(1, new Set(5)), 1);
-        node.log.add(new LogEntry(2, new Add(2)), 2);
-        node.log.add(new LogEntry(3, new Multiply(3)), 3);
-        node.log.add(new LogEntry(3, new Subtract(1)), 4);
+        node.log.add(new LogEntry(1, new Set(5).serialize()), 1);
+        node.log.add(new LogEntry(2, new Add(2).serialize()), 2);
+        node.log.add(new LogEntry(3, new Multiply(3).serialize()), 3);
+        node.log.add(new LogEntry(3, new Subtract(1).serialize()), 4);
 
         RequestVote req = new RequestVote(3, 3, 3, rquestorId);
         RequestVoteEvent event = new RequestVoteEvent(req, channel);
@@ -229,8 +229,8 @@ public class FollowerTest extends NodeStateTest{
         Peer peer = new Peer(rquestorId, node, group);
         peer.channel = channel;
         node.activePeers.put(rquestorId, peer);
-        node.log.add(new LogEntry(1, new Set(5)), 1);
-        node.log.add(new LogEntry(2, new Add(2)), 2);
+        node.log.add(new LogEntry(1, new Set(5).serialize()), 1);
+        node.log.add(new LogEntry(2, new Add(2).serialize()), 2);
 
 
         RequestVote req = new RequestVote(3, 3, 3, rquestorId);
@@ -249,7 +249,7 @@ public class FollowerTest extends NodeStateTest{
         node.currentTerm = 1;
         node.leaderId = leaderId;
 
-        Command command = new Set(5);
+        byte[] command = new Set(5).serialize();
         ReceivedCommandEvent event = new ReceivedCommandEvent(command, channel);
 
         follower.handle(event);

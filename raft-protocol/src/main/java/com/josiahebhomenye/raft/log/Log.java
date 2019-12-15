@@ -10,20 +10,22 @@ import java.util.Random;
 public class Log implements AutoCloseable, Iterable<LogEntry>{
     private static final int INT_SIZE = 4;
     public static final int LONG_SIZE = 8;
-    private static final int COMMAND_SIZE = INT_SIZE * 2;
-    private static final int SIZE_OFFSET = COMMAND_SIZE + LONG_SIZE;
     private RandomAccessFile data;
+    private int entrySize;
+    private int sizeOffset;
 
     @SneakyThrows
-    public Log(String path){
+    public Log(String path, int entrySize){
         data = new RandomAccessFile(path, "rwd");
+        this.entrySize = entrySize;
+        this.sizeOffset = entrySize + LONG_SIZE;
     }
 
     @SneakyThrows
     public void add(LogEntry entry, long index){
         if(index < 1) throw new IllegalArgumentException("index: " + index + ", cannot less than one");
         if(entry == null) throw new IllegalArgumentException("command cannot be null");
-        data.seek((index - 1) * SIZE_OFFSET);
+        data.seek((index - 1) * sizeOffset);
 
         data.write(entry.serialize());
     }
@@ -31,7 +33,7 @@ public class Log implements AutoCloseable, Iterable<LogEntry>{
     @SneakyThrows
     public LogEntry get(long index){
         if(index < 1 || index > size()) return null;
-        byte[] buff = new byte[SIZE_OFFSET];
+        byte[] buff = new byte[sizeOffset];
         data.seek(pos(index));
         data.read(buff);
 
@@ -43,7 +45,7 @@ public class Log implements AutoCloseable, Iterable<LogEntry>{
     }
 
     private long pos(long index){
-        return (index-1) * SIZE_OFFSET;
+        return (index-1) * sizeOffset;
     }
 
     @Override
@@ -67,7 +69,7 @@ public class Log implements AutoCloseable, Iterable<LogEntry>{
 
     @SneakyThrows
     public long getLastIndex() {
-        return ((data.length() - SIZE_OFFSET)/SIZE_OFFSET ) + 1;
+        return ((data.length() - sizeOffset)/sizeOffset ) + 1;
     }
 
     @SneakyThrows
@@ -83,7 +85,7 @@ public class Log implements AutoCloseable, Iterable<LogEntry>{
     @SneakyThrows
     public void deleteFromIndex(long i) {
         if(i > getLastIndex()) return;
-        long newSize = (i - 1) * SIZE_OFFSET;
+        long newSize = (i - 1) * sizeOffset;
         data.setLength(newSize);
     }
 

@@ -1,5 +1,6 @@
 package com.josiahebhomenye.raft.log;
 
+import com.josiahebhomenye.raft.comand.Command;
 import com.josiahebhomenye.test.support.LogDomainSupport;
 import com.josiahebhomenye.test.support.StateDataSupport;
 import lombok.SneakyThrows;
@@ -20,7 +21,7 @@ public class LogTest implements StateDataSupport, LogDomainSupport {
 
     @Before
     public void setup(){
-        log = new Log("log.dat");
+        log = new Log("log.dat", Command.SIZE);
     }
 
     @After

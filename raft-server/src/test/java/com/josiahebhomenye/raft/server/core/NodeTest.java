@@ -82,8 +82,8 @@ public class NodeTest implements StateDataSupport {
         };
 
         Supplier<Void> createLogFile = () -> {
-            try(Log log = new Log("log.dat")){
-                log.add(new LogEntry(1, new Set(5)), 1);
+            try(Log log = new Log("log.dat", 8)){
+                log.add(new LogEntry(1, new Set(5).serialize()), 1);
             }catch (Exception e){
 
             }
@@ -100,7 +100,7 @@ public class NodeTest implements StateDataSupport {
         assertEquals(NodeState.NULL_STATE(), node.getState());
         assertEquals(new InetSocketAddress("localhost", 8080), node.getVotedFor());
         assertFalse(node.getLog().isEmpty());
-        assertEquals(new LogEntry(1, new Set(5)), node.getLog().get(1));
+        assertEquals(new LogEntry(1, new Set(5).serialize()), node.getLog().get(1));
 
     }
 

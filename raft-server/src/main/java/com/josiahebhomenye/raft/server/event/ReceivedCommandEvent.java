@@ -14,9 +14,9 @@ import lombok.experimental.Accessors;
 @EqualsAndHashCode(callSuper=false)
 public class ReceivedCommandEvent extends Event {
     private Channel sender;
-    private Command command;
+    private byte[] command;
 
-    public ReceivedCommandEvent(Command command, Channel sender){
+    public ReceivedCommandEvent(byte[] command, Channel sender){
         super(sender.remoteAddress());
         this.command = command;
         this.sender = sender;

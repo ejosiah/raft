@@ -14,5 +14,5 @@ import java.net.InetSocketAddress;
 @NoArgsConstructor
 public class RedirectCommand {
     private InetSocketAddress leaderId;
-    private Command command;
+    private byte[] command;
 }
