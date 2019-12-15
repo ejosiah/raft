@@ -1,6 +1,6 @@
 package com.josiahebhomenye.test.support;
 
-import com.josiahebhomenye.raft.Divide;
+import com.josiahebhomenye.raft.comand.Divide;
 import com.josiahebhomenye.raft.comand.Add;
 import com.josiahebhomenye.raft.comand.Multiply;
 import com.josiahebhomenye.raft.comand.Set;

@@ -1,6 +1,5 @@
 package com.josiahebhomenye.raft.comand;
 
-import com.josiahebhomenye.raft.Divide;
 import lombok.val;
 import org.junit.Test;
 

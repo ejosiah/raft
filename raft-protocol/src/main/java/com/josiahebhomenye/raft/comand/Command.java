@@ -1,7 +1,5 @@
 package com.josiahebhomenye.raft.comand;
 
-import com.josiahebhomenye.raft.Divide;
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;

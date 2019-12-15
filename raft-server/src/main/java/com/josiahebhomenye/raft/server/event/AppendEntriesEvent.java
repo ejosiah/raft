@@ -1,6 +1,6 @@
 package com.josiahebhomenye.raft.server.event;
 
-import com.josiahebhomenye.raft.AppendEntries;
+import com.josiahebhomenye.raft.rpc.AppendEntries;
 import com.josiahebhomenye.raft.event.Event;
 import io.netty.channel.Channel;
 import lombok.Data;

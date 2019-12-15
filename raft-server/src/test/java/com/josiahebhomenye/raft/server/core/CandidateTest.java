@@ -1,9 +1,9 @@
 package com.josiahebhomenye.raft.server.core;
 
-import com.josiahebhomenye.raft.AppendEntries;
-import com.josiahebhomenye.raft.AppendEntriesReply;
-import com.josiahebhomenye.raft.RequestVote;
-import com.josiahebhomenye.raft.RequestVoteReply;
+import com.josiahebhomenye.raft.rpc.AppendEntries;
+import com.josiahebhomenye.raft.rpc.AppendEntriesReply;
+import com.josiahebhomenye.raft.rpc.RequestVote;
+import com.josiahebhomenye.raft.rpc.RequestVoteReply;
 import com.josiahebhomenye.raft.server.event.*;
 import org.junit.Before;
 import org.junit.Test;

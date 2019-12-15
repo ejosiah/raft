@@ -1,6 +1,6 @@
 package com.josiahebhomenye.raft.comand;
 
-import com.josiahebhomenye.raft.EntryDeserializer;
+import com.josiahebhomenye.raft.client.EntryDeserializer;
 
 public class CommandDeserializer implements EntryDeserializer<Command> {
 

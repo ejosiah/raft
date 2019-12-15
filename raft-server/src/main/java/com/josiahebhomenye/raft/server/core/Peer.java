@@ -1,8 +1,7 @@
 package com.josiahebhomenye.raft.server.core;
 
-import com.josiahebhomenye.raft.AppendEntries;
-import com.josiahebhomenye.raft.AppendEntriesReply;
-import com.josiahebhomenye.raft.RequestVoteReply;
+import com.josiahebhomenye.raft.rpc.AppendEntriesReply;
+import com.josiahebhomenye.raft.rpc.RequestVoteReply;
 import com.josiahebhomenye.raft.server.event.*;
 import com.josiahebhomenye.raft.server.handlers.PeerChannelInitializer;
 import com.josiahebhomenye.raft.server.handlers.PeerLogger;
@@ -18,7 +17,6 @@ import lombok.RequiredArgsConstructor;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.List;
 
 @Getter
 @RequiredArgsConstructor

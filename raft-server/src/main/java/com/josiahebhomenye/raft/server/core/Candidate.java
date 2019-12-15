@@ -1,6 +1,6 @@
 package com.josiahebhomenye.raft.server.core;
 
-import com.josiahebhomenye.raft.RequestVote;
+import com.josiahebhomenye.raft.rpc.RequestVote;
 import com.josiahebhomenye.raft.server.event.*;
 
 public class Candidate extends NodeState {

@@ -1,8 +1,8 @@
 package com.josiahebhomenye.raft.server.core;
 
 
-import com.josiahebhomenye.raft.AppendEntries;
-import com.josiahebhomenye.raft.RequestVote;
+import com.josiahebhomenye.raft.rpc.AppendEntries;
+import com.josiahebhomenye.raft.rpc.RequestVote;
 import com.josiahebhomenye.raft.StateManager;
 import com.josiahebhomenye.raft.event.ApplyEntryEvent;
 import com.josiahebhomenye.raft.log.Log;
@@ -279,7 +279,7 @@ public class Node extends ChannelDuplexHandler {
         return AppendEntries.heartbeat(currentTerm, prevLogIndex, prevLogTerm, commitIndex, id);
     }
     
-    protected void sendAppendEntriesTo(Peer peer, long index){
+    protected void sendAppendEntriesTo(Peer peer){
         List<byte[]> entries = logEntriesFrom(peer.nextIndex);
         LogEntry previousEntry = log.get(peer.nextIndex - 1);
         long prevLogIndex = previousEntry != null ? peer.nextIndex - 1 : 0;
@@ -297,9 +297,9 @@ public class Node extends ChannelDuplexHandler {
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             if(Node.this.stopped()) return;
             if(msg instanceof AppendEntries){
-                Node.this.trigger(new AppendEntriesEvent((AppendEntries)msg, ctx.channel()));
+                trigger(new AppendEntriesEvent((AppendEntries)msg, ctx.channel()));
             }else if(msg instanceof RequestVote){
-                Node.this.trigger(new RequestVoteEvent((RequestVote)msg, ctx.channel()));
+                trigger(new RequestVoteEvent((RequestVote)msg, ctx.channel()));
             }
         }
     }

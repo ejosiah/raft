@@ -1,7 +1,6 @@
 package com.josiahebhomenye.raft.codec;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.josiahebhomenye.raft.AppendEntries;
 import com.josiahebhomenye.raft.comand.MessageType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;

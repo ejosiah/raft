@@ -1,14 +1,12 @@
 package com.josiahebhomenye.raft.server.core;
 
-import com.josiahebhomenye.raft.Acknowledgement;
-import com.josiahebhomenye.raft.AppendEntries;
+import com.josiahebhomenye.raft.rpc.Acknowledgement;
+import com.josiahebhomenye.raft.rpc.AppendEntries;
 import com.josiahebhomenye.raft.server.event.*;
-import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.LongStream;
 
 public class Leader extends NodeState {
 
@@ -34,7 +32,7 @@ public class Leader extends NodeState {
     @Override
     public void handle(ReceivedCommandEvent event) {
         node.add(event.command());
-        event.sender().writeAndFlush(Acknowledgement.successful());
+        event.sender().writeAndFlush(Acknowledgement.successful()); // TODO Don't reply the sender reply downstream
         node.replicate();   // TODO don't send if previously sent pending response
     }
 
@@ -64,7 +62,7 @@ public class Leader extends NodeState {
             }
         }else{
             event.sender().nextIndex--;
-            node.sendAppendEntriesTo(event.sender(), event.sender().nextIndex);
+            node.sendAppendEntriesTo(event.sender());
         }
     }
 

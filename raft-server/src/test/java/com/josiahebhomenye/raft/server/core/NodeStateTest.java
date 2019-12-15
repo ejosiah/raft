@@ -1,7 +1,7 @@
 package com.josiahebhomenye.raft.server.core;
 
-import com.josiahebhomenye.raft.AppendEntries;
-import com.josiahebhomenye.raft.RequestVote;
+import com.josiahebhomenye.raft.rpc.AppendEntries;
+import com.josiahebhomenye.raft.rpc.RequestVote;
 import com.josiahebhomenye.raft.server.config.ElectionTimeout;
 import com.josiahebhomenye.raft.server.config.ServerConfig;
 import com.josiahebhomenye.raft.server.event.*;

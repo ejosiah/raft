@@ -1,11 +1,10 @@
 package com.josiahebhomenye.raft.codec;
 
-import com.josiahebhomenye.raft.AppendEntries;
+import com.josiahebhomenye.raft.rpc.AppendEntries;
 import com.josiahebhomenye.raft.comand.Command;
 import com.josiahebhomenye.raft.comand.Set;
 import static java.util.Collections.*;
 import java.net.InetSocketAddress;
-import java.util.Arrays;
 
 public interface AppendEntriesTestFactory {
 

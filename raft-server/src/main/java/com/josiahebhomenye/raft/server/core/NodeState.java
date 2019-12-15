@@ -1,6 +1,6 @@
 package com.josiahebhomenye.raft.server.core;
 
-import com.josiahebhomenye.raft.AppendEntriesReply;
+import com.josiahebhomenye.raft.rpc.AppendEntriesReply;
 import com.josiahebhomenye.raft.server.event.*;
 
 import java.util.Objects;

@@ -1,7 +1,7 @@
 package com.josiahebhomenye.raft.server.support;
 
-import com.josiahebhomenye.raft.RequestVote;
-import com.josiahebhomenye.raft.RequestVoteReply;
+import com.josiahebhomenye.raft.rpc.RequestVote;
+import com.josiahebhomenye.raft.rpc.RequestVoteReply;
 import io.netty.channel.ChannelHandlerContext;
 import lombok.RequiredArgsConstructor;
 

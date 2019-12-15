@@ -1,7 +1,6 @@
-package com.josiahebhomenye.raft;
+package com.josiahebhomenye.raft.rpc;
 
 import lombok.*;
-import lombok.experimental.Accessors;
 
 import java.net.InetSocketAddress;
 import java.util.Arrays;

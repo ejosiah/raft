@@ -1,13 +1,9 @@
 package com.josiahebhomenye.raft.codec;
 
-import com.josiahebhomenye.raft.AppendEntries;
-import com.josiahebhomenye.raft.comand.Command;
-import com.josiahebhomenye.raft.comand.Set;
+import com.josiahebhomenye.raft.rpc.AppendEntries;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Test;
-
-import java.net.InetSocketAddress;
 
 import static org.junit.Assert.*;
 

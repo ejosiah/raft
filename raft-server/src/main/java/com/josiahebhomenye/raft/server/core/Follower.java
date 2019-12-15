@@ -1,8 +1,8 @@
 package com.josiahebhomenye.raft.server.core;
 
-import com.josiahebhomenye.raft.AppendEntriesReply;
-import com.josiahebhomenye.raft.RedirectCommand;
-import com.josiahebhomenye.raft.RequestVoteReply;
+import com.josiahebhomenye.raft.rpc.AppendEntriesReply;
+import com.josiahebhomenye.raft.rpc.RedirectCommand;
+import com.josiahebhomenye.raft.rpc.RequestVoteReply;
 import com.josiahebhomenye.raft.log.LogEntry;
 import com.josiahebhomenye.raft.server.event.*;
 

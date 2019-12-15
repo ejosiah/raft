@@ -1,4 +1,4 @@
-package com.josiahebhomenye.raft;
+package com.josiahebhomenye.raft.client;
 
 public interface EntryDeserializer<T> {
 

@@ -1,6 +1,6 @@
 package com.josiahebhomenye.raft.codec;
 
-import com.josiahebhomenye.raft.AppendEntriesReply;
+import com.josiahebhomenye.raft.rpc.AppendEntriesReply;
 
 public class AppendEntriesReplyEncoderTest extends JsonEncoderTest<AppendEntriesReply> {
     @Override

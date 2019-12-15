@@ -1,4 +1,4 @@
-package com.josiahebhomenye.raft;
+package com.josiahebhomenye.raft.comand;
 
 import com.josiahebhomenye.raft.comand.Command;
 import com.josiahebhomenye.raft.comand.Data;

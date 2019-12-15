@@ -1,12 +1,12 @@
 package com.josiahebhomenye.raft;
 
+import com.josiahebhomenye.raft.client.EntryDeserializer;
 import com.josiahebhomenye.raft.event.StateUpdatedEvent;
 import com.josiahebhomenye.raft.event.ApplyEntryEvent;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import lombok.experimental.Accessors;
 
 @NoArgsConstructor

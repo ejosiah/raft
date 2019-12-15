@@ -1,6 +1,6 @@
 package com.josiahebhomenye.raft.server.event;
 
-import com.josiahebhomenye.raft.AppendEntriesReply;
+import com.josiahebhomenye.raft.rpc.AppendEntriesReply;
 import com.josiahebhomenye.raft.event.Event;
 import com.josiahebhomenye.raft.server.core.Peer;
 import lombok.Data;

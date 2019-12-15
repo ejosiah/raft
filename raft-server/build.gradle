@@ -8,7 +8,7 @@ sourceCompatibility = 1.8
 dependencies {
 
     compile project(':raft-protocol')
-    compile project(':test-support')
+
 
     compile group: 'org.projectlombok', name: 'lombok', version: '1.18.10'
 
@@ -25,5 +25,6 @@ dependencies {
 
     testCompile group: 'junit', name: 'junit', version: '4.12'
     testCompile group: 'org.mockito', name: 'mockito-core', version: '3.1.0'
+    testCompile project(':test-support')
 
 }

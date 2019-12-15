@@ -1,18 +1,17 @@
 package com.josiahebhomenye.raft.server.config;
 
-import com.josiahebhomenye.raft.EntryDeserializer;
+import com.josiahebhomenye.raft.client.EntryDeserializer;
 import com.josiahebhomenye.raft.StateManager;
 import com.josiahebhomenye.raft.server.util.Timeout;
 import com.typesafe.config.Config;
 import lombok.*;
-import lombok.experimental.Accessors;
 
 import java.net.InetSocketAddress;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @With
+@Builder
 @RequiredArgsConstructor
 public class ServerConfig {
 

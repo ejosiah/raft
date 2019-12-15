@@ -1,8 +1,8 @@
 package com.josiahebhomenye.raft.server.support;
 
-import com.josiahebhomenye.raft.AppendEntries;
-import com.josiahebhomenye.raft.RequestVote;
-import com.josiahebhomenye.raft.RequestVoteReply;
+import com.josiahebhomenye.raft.rpc.AppendEntries;
+import com.josiahebhomenye.raft.rpc.RequestVote;
+import com.josiahebhomenye.raft.rpc.RequestVoteReply;
 import com.josiahebhomenye.raft.server.handlers.ProtocolInitializer;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;

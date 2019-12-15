@@ -1,4 +1,4 @@
-package com.josiahebhomenye.raft;
+package com.josiahebhomenye.raft.rpc;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

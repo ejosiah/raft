@@ -1,9 +1,8 @@
 package com.josiahebhomenye.raft.server.core;
 
-import com.josiahebhomenye.raft.Acknowledgement;
-import com.josiahebhomenye.raft.AppendEntries;
-import com.josiahebhomenye.raft.AppendEntriesReply;
-import com.josiahebhomenye.raft.comand.Command;
+import com.josiahebhomenye.raft.rpc.Acknowledgement;
+import com.josiahebhomenye.raft.rpc.AppendEntries;
+import com.josiahebhomenye.raft.rpc.AppendEntriesReply;
 import com.josiahebhomenye.raft.comand.Set;
 import com.josiahebhomenye.raft.log.LogEntry;
 import com.josiahebhomenye.raft.server.event.*;

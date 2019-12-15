@@ -1,6 +1,6 @@
 package com.josiahebhomenye.raft.codec;
 
-import com.josiahebhomenye.raft.RequestVote;
+import com.josiahebhomenye.raft.rpc.RequestVote;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 
