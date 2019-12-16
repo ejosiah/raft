@@ -6,17 +6,25 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
+import java.util.UUID;
 
 public interface StateDataSupport {
 
+    default String logPath(){ return  UUID.randomUUID().toString(); };
+    default String statePath(){ return UUID.randomUUID().toString(); }
+
     @SneakyThrows
-    default void deleteState(){
-        deleteState("log.dat", "state.dat");
+    default void deleteAllState(){
+        delete("log.dat");
+        delete( "state.dat");
     }
 
     @SneakyThrows
-    default void deleteState(String logPath, String statePath){
-        new File(logPath).delete();
-        new File(statePath).delete();
+    default void delete(String path){
+        try {
+            Files.delete(new File(path).getAbsoluteFile().toPath());
+        } catch (NoSuchFileException e) {
+            // Ignore
+        }
     }
 }

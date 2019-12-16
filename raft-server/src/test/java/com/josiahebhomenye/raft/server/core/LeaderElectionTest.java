@@ -56,7 +56,8 @@ public class LeaderElectionTest implements StateDataSupport {
         peers.forEach(RemotePeerMock::stop);
         nodeLatch.countDown();
         node.stop();
-        deleteState();
+        delete(config.logPath);
+        delete(config.statePath);
         node = null;
     }
 

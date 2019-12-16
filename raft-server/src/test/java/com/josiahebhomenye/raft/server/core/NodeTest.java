@@ -36,19 +36,14 @@ public class NodeTest implements StateDataSupport {
     @Before
     @SneakyThrows
     public void setup(){
-        try {
-            Files.delete(Paths.get("state.dat"));
-            Files.delete(Paths.get("log.dat"));
-        } catch (NoSuchFileException e) {
-            // ignore
-        }
         initializeNode();
     }
 
     @After
     public void tearDown(){
         node.stop();
-        deleteState();
+        delete(config.logPath);
+        delete(config.statePath);
     }
 
     private void initializeNode(){
@@ -94,6 +89,7 @@ public class NodeTest implements StateDataSupport {
 
         createStateFile.get();
         createLogFile.get();
+        node.stop();
         initializeNode();
 
         assertEquals(1, node.getCurrentTerm());

@@ -28,7 +28,7 @@ public class LogTest implements StateDataSupport, LogDomainSupport {
     @SneakyThrows
     public void tearDown(){
         log.close();
-        deleteState();
+        delete("log.dat");
     }
 
     @Test

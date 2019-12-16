@@ -41,13 +41,6 @@ public abstract class NodeStateTest implements StateDataSupport {
     @Before
     @SneakyThrows
     public void setup0(){
-        try {
-            Files.delete(Paths.get("log.dat"));
-            Files.delete(Paths.get("state.dat"));
-        } catch (NoSuchFileException e) {
-            // ignore
-        }
-
         group = new DefaultEventLoopGroup();
         userEventCapture = new UserEventCapture();
         ServerConfig config = new ServerConfig(ConfigFactory.load());
@@ -74,7 +67,8 @@ public abstract class NodeStateTest implements StateDataSupport {
     @After
     public void tearDown0(){
         node.stop();
-        deleteState();
+        delete(config.logPath);
+        delete(config.statePath);
     }
 
     @Test

@@ -25,8 +25,11 @@ public class DefaultStateManagerTest implements LogDomainSupport, StateDataSuppo
     protected DefaultStateManager stateManager;
     protected UserEventCapture userEventCapture;
 
+    Log log;
+
     @Before
     public void setup(){
+        log = new Log("log.dat", Command.SIZE);
         stateManager = new DefaultStateManager();
         userEventCapture = new UserEventCapture();
         userEventCapture.ignore(ApplyEntryEvent.class);
@@ -35,12 +38,12 @@ public class DefaultStateManagerTest implements LogDomainSupport, StateDataSuppo
 
     @After
     public void tearDown(){
-        deleteState();
+        log.close();
+        delete("log.path");
     }
 
     @Test
     public void update_state_when_update_state_event_received(){
-        Log log = new Log("log.dat", Command.SIZE);
         List<LogEntry> entries = logEntries();
 
         IntStream.rangeClosed(1, entries.size()).forEach(i -> log.add(entries.get(i-1), i));

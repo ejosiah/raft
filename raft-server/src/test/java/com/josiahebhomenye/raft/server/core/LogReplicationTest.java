@@ -169,7 +169,8 @@ public class LogReplicationTest implements StateDataSupport {
     public void tearDown(){
         nodes.forEach(node -> {
            node.stop();
-           deleteState(node.config.logPath, node.config.statePath);
+           delete(node.config.logPath);
+           delete(node.config.statePath);
         });
 
         nodes.clear();
