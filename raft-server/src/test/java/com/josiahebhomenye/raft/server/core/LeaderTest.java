@@ -1,5 +1,6 @@
 package com.josiahebhomenye.raft.server.core;
 
+import com.josiahebhomenye.raft.client.Request;
 import com.josiahebhomenye.raft.rpc.Acknowledgement;
 import com.josiahebhomenye.raft.rpc.AppendEntries;
 import com.josiahebhomenye.raft.rpc.AppendEntriesReply;
@@ -43,7 +44,8 @@ public class LeaderTest extends NodeStateTest {
         node.currentTerm = 1;
         node.id = leaderId;
         byte[] command = new Set(5).serialize();
-        ReceivedCommandEvent event = new ReceivedCommandEvent(command, channel);
+        Request request = new Request(command);
+        ReceivedRequestEvent event = new ReceivedRequestEvent(request, channel);
 
         peers.forEach(peer -> node.handle(new PeerConnectedEvent(peer)));
 

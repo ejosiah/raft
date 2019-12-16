@@ -30,8 +30,8 @@ public class Leader extends NodeState {
 
 
     @Override
-    public void handle(ReceivedCommandEvent event) {
-        node.add(event.command());
+    public void handle(ReceivedRequestEvent event) {
+        node.add(event.request().getBody());
         event.sender().writeAndFlush(Acknowledgement.successful()); // TODO Don't reply the sender reply downstream
         node.replicate();   // TODO don't send if previously sent pending response
     }

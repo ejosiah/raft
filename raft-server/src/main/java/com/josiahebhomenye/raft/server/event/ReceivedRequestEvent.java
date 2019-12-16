@@ -1,6 +1,6 @@
 package com.josiahebhomenye.raft.server.event;
 
-import com.josiahebhomenye.raft.comand.Command;
+import com.josiahebhomenye.raft.client.Request;
 import com.josiahebhomenye.raft.event.Event;
 import io.netty.channel.Channel;
 import lombok.Data;
@@ -12,13 +12,13 @@ import lombok.experimental.Accessors;
 @NoArgsConstructor
 @Accessors(fluent = true)
 @EqualsAndHashCode(callSuper=false)
-public class ReceivedCommandEvent extends Event {
+public class ReceivedRequestEvent extends Event {
     private Channel sender;
-    private byte[] command;
+    private Request request;
 
-    public ReceivedCommandEvent(byte[] command, Channel sender){
+    public ReceivedRequestEvent(Request request, Channel sender){
         super(sender.remoteAddress());
-        this.command = command;
+        this.request = request;
         this.sender = sender;
     }
 }

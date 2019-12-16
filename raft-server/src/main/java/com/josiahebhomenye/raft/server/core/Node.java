@@ -181,7 +181,7 @@ public class Node extends ChannelDuplexHandler {
         state.handle(event);
     }
 
-    public void handle(ReceivedCommandEvent event){
+    public void handle(ReceivedRequestEvent event){
         state.handle(event);
     }
 

@@ -58,7 +58,7 @@ public abstract class NodeState {
 
     }
 
-    public void handle(ReceivedCommandEvent event){}
+    public void handle(ReceivedRequestEvent event){}
 
     public String name(){
         return this.getClass().getSimpleName();

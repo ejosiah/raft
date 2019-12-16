@@ -1,5 +1,6 @@
 package com.josiahebhomenye.raft.rpc;
 
+import com.josiahebhomenye.raft.client.Request;
 import com.josiahebhomenye.raft.comand.Command;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -12,7 +13,7 @@ import java.net.InetSocketAddress;
 @With
 @AllArgsConstructor
 @NoArgsConstructor
-public class RedirectCommand {
+public class Redirect {
     private InetSocketAddress leaderId;
-    private byte[] command;
+    private Request request;
 }

@@ -3,12 +3,14 @@ package com.josiahebhomenye.raft.codec;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.josiahebhomenye.raft.comand.MessageType;
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 import lombok.RequiredArgsConstructor;
 
 import java.io.ByteArrayOutputStream;
 
+@ChannelHandler.Sharable
 @RequiredArgsConstructor
 public class JsonEncoder<T> extends MessageToByteEncoder<T> {
 

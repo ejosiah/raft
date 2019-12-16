@@ -1,5 +1,6 @@
 package com.josiahebhomenye.raft.server.core;
 
+import com.josiahebhomenye.raft.client.Request;
 import com.josiahebhomenye.raft.comand.*;
 import com.josiahebhomenye.raft.log.LogEntry;
 import com.josiahebhomenye.raft.rpc.*;
@@ -11,6 +12,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import static org.junit.Assert.*;
 
@@ -250,12 +252,13 @@ public class FollowerTest extends NodeStateTest{
         node.leaderId = leaderId;
 
         byte[] command = new Set(5).serialize();
-        ReceivedCommandEvent event = new ReceivedCommandEvent(command, channel);
+        Request request = new Request(command);
+        ReceivedRequestEvent event = new ReceivedRequestEvent(request, channel);
 
         follower.handle(event);
 
-        RedirectCommand reply = channel.readOutbound();
+        Redirect reply = channel.readOutbound();
 
-        assertEquals(new RedirectCommand(leaderId, command), reply);
+        assertEquals(new Redirect(leaderId, request), reply);
     }
 }
