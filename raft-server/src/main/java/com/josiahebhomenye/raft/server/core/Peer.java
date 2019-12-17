@@ -67,7 +67,11 @@ public class Peer {
     }
 
     public void handle(CancelHeartbeatTimeoutEvent event){
-        channel.pipeline().remove("IdleStateHandler");
+        try {
+            channel.pipeline().remove("IdleStateHandler");
+        }catch (Exception ex){
+            // no IdleStateHandler defined
+        }
     }
 
     public void handle(IdleStateEvent event){

@@ -2,22 +2,22 @@ package com.josiahebhomenye.raft.server.support;
 
 import com.josiahebhomenye.raft.server.core.Interceptor;
 import com.josiahebhomenye.raft.server.event.StateTransitionEvent;
-import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import lombok.RequiredArgsConstructor;
-import org.omg.CORBA.TIMEOUT;
 
-import static com.josiahebhomenye.raft.server.core.NodeState.*;
-import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
+@ChannelHandler.Sharable
 @RequiredArgsConstructor
-public class PreElectionSetup extends Interceptor {
-    private final List<RemotePeerMock> peers;
+public class LeaderStart extends Interceptor {
+
+    private final CountDownLatch leaderStartLatch;
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        if(evt.equals(new StateTransitionEvent(NULL_STATE(), FOLLOWER(), node.id()))){
-            peers.forEach(RemotePeerMock::startClient);
+        if(evt.equals(StateTransitionEvent.initialStateTransition())){
+            leaderStartLatch.await();
         }
         ctx.fireUserEventTriggered(evt);
     }

@@ -16,11 +16,11 @@ public class ServerChannelInitializer extends ProtocolInitializer<NioServerSocke
 
         ChannelPipeline pipeline = ch.pipeline();
 
-        node.getPreProcessInterceptors().forEach(pipeline::addFirst);
+        node.preProcessInterceptors().forEach(pipeline::addFirst);
         pipeline
             .addLast(node)
-            .addLast(node.getStateManager())
+            .addLast(node.stateManager())
             .addLast(new ServerLogger(node));
-        node.getPostProcessInterceptors().forEach(pipeline::addLast);
+        node.postProcessInterceptors().forEach(pipeline::addLast);
     }
 }

@@ -13,7 +13,7 @@ public class ForceLeader extends Interceptor {
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if(evt.equals(StateTransitionEvent.initialStateTransition())){
             log.info("forcing leader state on {}", node);
-            node.getState().transitionTo(NodeState.LEADER());
+            node.state().transitionTo(NodeState.LEADER());
             ctx.pipeline().remove(this);
             log.info("removed ForceLeader interceptor from pipeline");
         }else{

@@ -7,6 +7,8 @@ import com.josiahebhomenye.raft.server.config.ServerConfig;
 import com.josiahebhomenye.raft.server.event.CommitEvent;
 import com.josiahebhomenye.raft.server.event.StateTransitionEvent;
 import com.josiahebhomenye.raft.server.support.ForceLeader;
+import com.josiahebhomenye.raft.server.support.LeaderStart;
+import com.josiahebhomenye.raft.server.support.TestEnd;
 import com.josiahebhomenye.test.support.StateDataSupport;
 import com.typesafe.config.ConfigFactory;
 import io.netty.channel.ChannelHandler;
@@ -43,8 +45,8 @@ public class LogReplicationTest implements StateDataSupport {
     public void setup(){
         leaderStartLatch = new CountDownLatch(1);
         testEndLatch = new CountDownLatch(4);
-        leaderStart = new LeaderStart();
-        testEnd = new TestEnd();
+        leaderStart = new LeaderStart(leaderStartLatch);
+        testEnd = new TestEnd(new CommitEvent(8L, null), testEndLatch);
 
         buildLogEntries();
         constructStateData();
@@ -107,16 +109,6 @@ public class LogReplicationTest implements StateDataSupport {
         writeState(3, config.id, "state2.dat");
         writeState(1, config.id, "state3.dat");
         writeState(3, config.id, "state4.dat");
-    }
-
-    void writeState(long term, InetSocketAddress votedFor, String path){
-        try(DataOutputStream out = new DataOutputStream(new FileOutputStream(path))){
-            out.writeLong(term);
-            out.writeUTF(votedFor.getHostName());
-            out.writeInt(votedFor.getPort());
-        }catch(Exception ex){
-
-        }
     }
 
     private void constructNodes() {
@@ -200,29 +192,4 @@ public class LogReplicationTest implements StateDataSupport {
         assertEquals("follower0's log not in sync with leader's", leader.log, follower2.log);
         assertEquals("follower0's log not in sync with leader's", leader.log, follower3.log);
     }
-
-    @ChannelHandler.Sharable
-    class LeaderStart extends Interceptor{
-
-        @Override
-        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-            if(evt.equals(StateTransitionEvent.initialStateTransition())){
-                leaderStartLatch.await();
-            }
-            ctx.fireUserEventTriggered(evt);
-        }
-    }
-
-    @ChannelHandler.Sharable
-    class TestEnd extends Interceptor{
-
-        @Override
-        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-            if(evt.equals(new CommitEvent(8L, null))){
-                testEndLatch.countDown();
-            }
-            ctx.fireUserEventTriggered(evt);
-        }
-    }
-
 }

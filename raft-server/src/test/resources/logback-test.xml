@@ -8,10 +8,10 @@
         </encoder>
     </appender>
 
-    <logger name="com.josiahebhomenye.raft.server" level="WARN"/>
-    <logger name="Node" level="WARN"/>
+    <logger name="com.josiahebhomenye.raft.server" level="DEBUG"/>
+    <logger name="Node" level="DEBUG"/>
 
-    <root level="WARN">
+    <root level="INFO">
         <appender-ref ref="STDOUT" />
     </root>
 </configuration>

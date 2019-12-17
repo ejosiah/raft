@@ -19,6 +19,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.concurrent.ScheduledFuture;
 import lombok.Getter;
 import lombok.SneakyThrows;
+import lombok.experimental.Accessors;
 
 import java.io.DataInputStream;
 import java.io.FileInputStream;
@@ -33,6 +34,7 @@ import static com.josiahebhomenye.raft.server.core.NodeState.FOLLOWER;
 import static com.josiahebhomenye.raft.server.core.NodeState.NULL_STATE;
 
 @Getter
+@Accessors(fluent = true)
 public class Node extends ChannelDuplexHandler {
     long currentTerm;
     long commitIndex;

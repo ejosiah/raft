@@ -56,10 +56,10 @@ public class NodeTest implements StateDataSupport {
 
     @Test
     public void ensureInitialStateOnFirstBoot(){
-        assertEquals(0, node.getCurrentTerm());
-        assertNull(node.getVotedFor());
-        assertEquals(NodeState.NULL_STATE(), node.getState());
-        assertTrue(node.getLog().isEmpty());
+        assertEquals(0, node.currentTerm());
+        assertNull(node.votedFor());
+        assertEquals(NodeState.NULL_STATE(), node.state());
+        assertTrue(node.log().isEmpty());
     }
 
     @Test
@@ -92,11 +92,11 @@ public class NodeTest implements StateDataSupport {
         node.stop();
         initializeNode();
 
-        assertEquals(1, node.getCurrentTerm());
-        assertEquals(NodeState.NULL_STATE(), node.getState());
-        assertEquals(new InetSocketAddress("localhost", 8080), node.getVotedFor());
-        assertFalse(node.getLog().isEmpty());
-        assertEquals(new LogEntry(1, new Set(5).serialize()), node.getLog().get(1));
+        assertEquals(1, node.currentTerm());
+        assertEquals(NodeState.NULL_STATE(), node.state());
+        assertEquals(new InetSocketAddress("localhost", 8080), node.votedFor());
+        assertFalse(node.log().isEmpty());
+        assertEquals(new LogEntry(1, new Set(5).serialize()), node.log().get(1));
 
     }
 

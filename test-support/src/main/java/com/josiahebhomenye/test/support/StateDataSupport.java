@@ -2,7 +2,10 @@ package com.josiahebhomenye.test.support;
 
 import lombok.SneakyThrows;
 
+import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
@@ -25,6 +28,16 @@ public interface StateDataSupport {
             Files.delete(new File(path).getAbsoluteFile().toPath());
         } catch (NoSuchFileException e) {
             // Ignore
+        }
+    }
+
+    default void writeState(long term, InetSocketAddress votedFor, String path){
+        try(DataOutputStream out = new DataOutputStream(new FileOutputStream(path))){
+            out.writeLong(term);
+            out.writeUTF(votedFor.getHostName());
+            out.writeInt(votedFor.getPort());
+        }catch(Exception ex){
+
         }
     }
 }
