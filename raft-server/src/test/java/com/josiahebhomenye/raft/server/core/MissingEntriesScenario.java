@@ -1,5 +1,7 @@
 package com.josiahebhomenye.raft.server.core;
 
+import com.josiahebhomenye.raft.comand.Subtract;
+import com.josiahebhomenye.raft.log.LogEntry;
 import com.josiahebhomenye.raft.server.support.NodeState;
 import com.josiahebhomenye.raft.server.support.RaftScenarios;
 import com.josiahebhomenye.test.support.LogDomainSupport;
@@ -16,6 +18,15 @@ public class MissingEntriesScenario extends RaftScenarios implements LogDomainSu
                 add(NodeState.leader(new InetSocketAddress(9000), 8L, leaderEntries()));
                 add(NodeState.follower(new InetSocketAddress(9001), new InetSocketAddress(9000), 6, followerMissingEntries0()));
                 add(NodeState.follower(new InetSocketAddress(9002), new InetSocketAddress(9000), 4, followerMissingEntries1()));
+            }
+        };
+    }
+
+    @Override
+    protected List<LogEntry> newEntries() {
+        return new ArrayList<LogEntry>(){
+            {
+                add(new LogEntry(8, new Subtract(2).serialize()));
             }
         };
     }

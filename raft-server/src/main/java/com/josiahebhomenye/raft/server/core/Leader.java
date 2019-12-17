@@ -88,5 +88,4 @@ public class Leader extends NodeState {
     private boolean replicatedOnMajority(int replicated){
         return replicated >= node.config.majority || (float)(replicated/node.activePeers.size()) >= 0.5;
     }
-
 }

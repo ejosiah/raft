@@ -1,6 +1,7 @@
 package com.josiahebhomenye.raft.server.core;
 
 
+import com.josiahebhomenye.raft.event.Event;
 import com.josiahebhomenye.raft.rpc.AppendEntries;
 import com.josiahebhomenye.raft.rpc.RequestVote;
 import com.josiahebhomenye.raft.StateManager;
@@ -27,6 +28,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -57,6 +59,9 @@ public class Node extends ChannelDuplexHandler {
 
     List<ChannelDuplexHandler> preProcessInterceptors = new ArrayList<>();
     List<ChannelDuplexHandler> postProcessInterceptors = new ArrayList<>();
+
+    private CompletableFuture<Void> stopPromise;
+    private boolean stopping;
 
     @SneakyThrows
     public Node(ServerConfig config){
@@ -127,16 +132,20 @@ public class Node extends ChannelDuplexHandler {
     }
 
     @SneakyThrows
-    public void stop(){
-        log.close();
-        clientGroup.shutdownGracefully().sync();
-        group.shutdownGracefully().sync();
+    public CompletableFuture<Void> stop(){
+        if(stopPromise == null) {
+            stopPromise = new CompletableFuture<>();
+            trigger(new StopEvent(id));
+        }
+        return stopPromise;
     }
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        Dynamic.invoke(this, "handle", evt);
-        ctx.fireUserEventTriggered(evt);
+        if(!stopping) {
+            Dynamic.invoke(this, "handle", evt);
+            ctx.fireUserEventTriggered(evt);
+        }
     }
 
     public void handle(StateTransitionEvent event){
@@ -221,13 +230,44 @@ public class Node extends ChannelDuplexHandler {
         state.handle(event);
     }
 
+    public void handle(StopEvent event){
+        stopping = true;
+        cancelElectionTimeOut();
+        broadcast(event);
+        log.close();
+        clientGroup.shutdownGracefully().addListener(f -> {
+            if (f.isSuccess()) {
+                group.shutdownGracefully().addListener(ff -> {
+                    if(ff.isSuccess()){
+                        stopPromise.complete(null);
+                    }else{
+                        stopPromise.completeExceptionally(ff.cause());
+                    }
+                });
+            } else {
+                stopPromise.completeExceptionally(f.cause());
+            }
+        });
+
+    }
+
+    public void broadcast(Event event){
+        activePeers.values().forEach(peer -> {
+            try{
+                peer.trigger(event);
+            }catch (Exception e){
+                channel.pipeline().fireExceptionCaught(new Exception(String.format("error sending %s to %s", event, peer)));
+            }
+        });
+    }
+
     public Long nextTimeout(){
         return config.electionTimeout.get();
     }
 
     public boolean cancelElectionTimeOut(){
         return scheduledElectionTimeout == null || (!scheduledElectionTimeout.isCancelled()
-                && scheduledElectionTimeout.isCancellable() && scheduledElectionTimeout.cancel(false));
+                && scheduledElectionTimeout.isCancellable() && scheduledElectionTimeout.cancel(true));
     }
 
     public long prevLogIndex(){
@@ -257,7 +297,7 @@ public class Node extends ChannelDuplexHandler {
     }
 
     public void add(byte[] entry) {
-        log.add(new LogEntry(currentTerm, entry), ++lastApplied);
+        log.add(new LogEntry(currentTerm, entry));
     }
 
     public void replicate() {
@@ -307,7 +347,7 @@ public class Node extends ChannelDuplexHandler {
     }
 
     private boolean stopped() {
-        return group.isShutdown();
+        return stopPromise != null && stopPromise.isDone();
     }
 
     @Override

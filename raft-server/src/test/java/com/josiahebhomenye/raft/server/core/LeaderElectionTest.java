@@ -12,6 +12,7 @@ import com.josiahebhomenye.test.support.StateDataSupport;
 import com.josiahebhomenye.test.support.UserEventCapture;
 import com.typesafe.config.ConfigFactory;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -41,6 +42,8 @@ public class LeaderElectionTest implements StateDataSupport {
 
     @Before
     public void setup(){
+        delete(config.logPath);
+        delete(config.statePath);
         config = config.withElectionTimeout(electionTimeout).withHeartbeatTimeout(heartbeatTimeout);
 
         testLatch = new CountDownLatch(1);
@@ -52,10 +55,11 @@ public class LeaderElectionTest implements StateDataSupport {
     }
 
     @After
+    @SneakyThrows
     public void tearDown(){
         peers.forEach(RemotePeerMock::stop);
         nodeLatch.countDown();
-        node.stop();
+        node.stop().get();
         delete(config.logPath);
         delete(config.statePath);
         node = null;

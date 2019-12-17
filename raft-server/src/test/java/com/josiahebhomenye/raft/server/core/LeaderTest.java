@@ -45,23 +45,23 @@ public class LeaderTest extends NodeStateTest {
         node.id = leaderId;
         byte[] command = new Set(5).serialize();
         Request request = new Request(command);
-        ReceivedRequestEvent event = new ReceivedRequestEvent(request, channel);
+        ReceivedRequestEvent event = new ReceivedRequestEvent(request, clientChannel);
 
         peers.forEach(peer -> node.handle(new PeerConnectedEvent(peer)));
 
         leader.handle(event);
 
-        assertEquals(Acknowledgement.successful(), channel.readOutbound());
+        assertEquals(Acknowledgement.successful(), clientChannel.readOutbound());
 
 
         byte[] entry = new LogEntry(1, command).serialize();
 
         AppendEntries expected = new AppendEntries(1, 0, 0, 0, leaderId, Arrays.asList(entry));
 
-        assertEquals(expected, channel.readOutbound());
-        assertEquals(expected, channel.readOutbound());
-        assertEquals(expected, channel.readOutbound());
-        assertEquals(expected, channel.readOutbound());
+        assertEquals(expected, peerChannel.readOutbound());
+        assertEquals(expected, peerChannel.readOutbound());
+        assertEquals(expected, peerChannel.readOutbound());
+        assertEquals(expected, peerChannel.readOutbound());
     }
 
     @Test
@@ -137,7 +137,7 @@ public class LeaderTest extends NodeStateTest {
         missingEntries.add(new LogEntry(3, new Set(4).serialize()).serialize());
 
         AppendEntries expected = new AppendEntries(3, 7, 3, 0, leaderId, missingEntries);
-        AppendEntries actual = channel.readOutbound();
+        AppendEntries actual = peerChannel.readOutbound();
 
         assertEquals(expected, actual);
 

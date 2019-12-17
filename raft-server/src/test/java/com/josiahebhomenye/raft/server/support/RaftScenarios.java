@@ -1,5 +1,6 @@
 package com.josiahebhomenye.raft.server.support;
 
+import com.josiahebhomenye.raft.client.Request;
 import com.josiahebhomenye.raft.comand.Command;
 import com.josiahebhomenye.raft.comand.Data;
 import com.josiahebhomenye.raft.event.StateUpdatedEvent;
@@ -7,25 +8,30 @@ import com.josiahebhomenye.raft.log.Log;
 import com.josiahebhomenye.raft.log.LogEntry;
 import com.josiahebhomenye.raft.server.config.ServerConfig;
 import com.josiahebhomenye.raft.server.core.Node;
+import com.josiahebhomenye.raft.server.event.ReceivedRequestEvent;
+import com.josiahebhomenye.raft.server.util.CheckedExceptionWrapper;
 import com.josiahebhomenye.test.support.StateDataSupport;
 import com.typesafe.config.ConfigFactory;
+import io.netty.channel.embedded.EmbeddedChannel;
+import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
-public abstract class RaftScenarios implements StateDataSupport {
+public abstract class RaftScenarios implements StateDataSupport, CheckedExceptionWrapper {
 
     CountDownLatch leaderStartLatch;
     CountDownLatch testEndLatch;
@@ -35,6 +41,8 @@ public abstract class RaftScenarios implements StateDataSupport {
     Data data = new Data(0);
     List<NodeState> nodeStates = nodeStates();
     InetSocketAddress leaderId;
+    AtomicBoolean running = new AtomicBoolean(false);
+    EmbeddedChannel channel;
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
@@ -49,16 +57,19 @@ public abstract class RaftScenarios implements StateDataSupport {
         NodeState leaderState = nodeStates.stream().filter(ns -> ns.leader()).findFirst().get();
         leaderId = leaderState.id();
         List<LogEntry> entries = new ArrayList<>(leaderState.logEntries());
+        entries.addAll(newEntries());
 
         entries.stream().map(le -> Command.restore(le.getCommand())).forEach(command -> {
             command.apply(data);
         });
 
         testEnd = new TestEnd(new StateUpdatedEvent(data, null), testEndLatch);
+        channel = new EmbeddedChannel();
 
         buildStateData();
         buildLogEntries();
         constructNodes();
+        running.set(true);
     }
 
     void buildStateData(){
@@ -108,11 +119,11 @@ public abstract class RaftScenarios implements StateDataSupport {
     @After
     public void tearDown(){
         nodes.forEach(node -> {
-            node.stop();
+            wrap(() ->node.stop().get());
             delete(node.config().logPath);
             delete(node.config().statePath);
         });
-
+        running.set(false);
         nodes.clear();
     }
 
@@ -120,14 +131,16 @@ public abstract class RaftScenarios implements StateDataSupport {
     public void runScenario() throws Exception {
         Node leader = nodes.stream().filter(n -> n.id().equals(leaderId)).findFirst().orElseThrow(() -> new Exception("No Leader defined"));
 
+        new NewEntriesSupplier(leader).start();
+
         leader.start();
         leaderStartLatch.countDown();
 
         List<Node> followers = nodes.stream().filter(n -> !n.id().equals(leaderId)).collect(Collectors.toList());
         followers.forEach(Node::start);
 
-        if(!testEndLatch.await(10, TimeUnit.SECONDS)){
-            logger.warn("{} did not finish before timeout elapsed :(", this.getClass().getSimpleName());
+        if(!testEndLatch.await(30, TimeUnit.SECONDS)){
+            fail(String.format("%s did not finish before timeout elapsed", this.getClass().getSimpleName()));
         }
         Thread.sleep(2000);  // wait a little bit for logs to flush to disk
 
@@ -142,4 +155,23 @@ public abstract class RaftScenarios implements StateDataSupport {
     }
 
     protected abstract List<NodeState> nodeStates();
+
+    @RequiredArgsConstructor
+    class NewEntriesSupplier extends Thread{
+
+        private final Node leader;
+        Random random = new Random();
+        Iterator<LogEntry> itr = newEntries().iterator();
+
+        @Override
+        @SneakyThrows
+        public void run() {
+            leaderStartLatch.await();
+            while(running.get() && itr.hasNext()){
+                Thread.sleep(random.nextInt(100));
+                ReceivedRequestEvent event = new ReceivedRequestEvent(new Request(itr.next().getCommand()), channel);
+                leader.channel().pipeline().fireUserEventTriggered(event);
+            }
+        }
+    }
 }

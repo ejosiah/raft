@@ -12,7 +12,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 import static org.junit.Assert.*;
 
@@ -32,10 +31,10 @@ public class FollowerTest extends NodeStateTest{
         node.currentTerm = 2;
         AppendEntries entries = AppendEntries.heartbeat(node.currentTerm - 1, 0, 0, 0, leaderId);
 
-        follower.handle(new AppendEntriesEvent(entries, channel));
+        follower.handle(new AppendEntriesEvent(entries, nodeChannel));
 
         AppendEntriesReply expected = new AppendEntriesReply(2, false);
-        AppendEntriesReply actual = channel.readOutbound();
+        AppendEntriesReply actual = nodeChannel.readOutbound();
 
         assertEquals(expected, actual);
 
@@ -52,10 +51,10 @@ public class FollowerTest extends NodeStateTest{
 
         AppendEntries entries = AppendEntries.heartbeat(node.currentTerm, 3, 3, 0, leaderId);
 
-        follower.handle(new AppendEntriesEvent(entries, channel));
+        follower.handle(new AppendEntriesEvent(entries, nodeChannel));
 
         AppendEntriesReply expected = new AppendEntriesReply(node.currentTerm, false);
-        AppendEntriesReply actual = channel.readOutbound();
+        AppendEntriesReply actual = nodeChannel.readOutbound();
 
         assertEquals(expected, actual);
     }
@@ -81,7 +80,7 @@ public class FollowerTest extends NodeStateTest{
 
         AppendEntries appendEntries = new AppendEntries(leaderTerm, prevLogIndex, prevLogTerm, leaderCommit, leaderId, entries);
 
-        follower.handle(new AppendEntriesEvent(appendEntries, channel));
+        follower.handle(new AppendEntriesEvent(appendEntries, nodeChannel));
 
         assertEquals(4, node.log.size());
         assertNotEquals(conflictingEntry, node.log.get(4)); // conflicting entry removed
@@ -92,7 +91,7 @@ public class FollowerTest extends NodeStateTest{
         assertEquals(expectedCommitEvent, userEventCapture.get(1));
 
         AppendEntriesReply expected = new AppendEntriesReply(leaderTerm, true);
-        AppendEntriesReply actual = channel.readOutbound();
+        AppendEntriesReply actual = nodeChannel.readOutbound();
 
         assertEquals(expected, actual);
     }
@@ -142,17 +141,15 @@ public class FollowerTest extends NodeStateTest{
     @SneakyThrows
     public void Follower_should_not_grant_vote_when_requestors_term_is_less_than_current_term(){
         node.currentTerm = 2;
-        InetSocketAddress rquestorId = new InetSocketAddress("localhost", 9001);
-        Peer peer = new Peer(rquestorId, node, group);
-        peer.channel = channel;
-        node.activePeers.put(rquestorId, peer);
 
-        RequestVote req = new RequestVote(1, 3, 1, rquestorId);
-        RequestVoteEvent event = new RequestVoteEvent(req, channel);
+        follower.handle(new PeerConnectedEvent(peers.getFirst()));
+
+        RequestVote req = new RequestVote(1, 3, 1, peers.getFirst().id);
+        RequestVoteEvent event = new RequestVoteEvent(req, peerChannel);
 
         follower.handle(event);
 
-        RequestVoteReply reply = channel.readOutbound();
+        RequestVoteReply reply = peerChannel.readOutbound();
         assertEquals(new RequestVoteReply(node.currentTerm, false), reply);
         assertEquals(node.state, NodeState.FOLLOWER());
     }
@@ -161,18 +158,16 @@ public class FollowerTest extends NodeStateTest{
     @SneakyThrows
     public void follower_should_not_grant_vote_when_already_voted_for_another_candidate(){
         node.currentTerm = 2;
-        node.votedFor = new InetSocketAddress("localhost", 9001);
-        InetSocketAddress rquestorId = new InetSocketAddress("localhost", 9001);
-        Peer peer = new Peer(rquestorId, node, group);
-        peer.channel = channel;
-        node.activePeers.put(rquestorId, peer);
+        node.votedFor = peers.get(1).id;
 
-        RequestVote req = new RequestVote(3, 3, 1, rquestorId);
-        RequestVoteEvent event = new RequestVoteEvent(req, channel);
+        follower.handle(new PeerConnectedEvent(peers.getFirst()));
+
+        RequestVote req = new RequestVote(3, 3, 1, peers.getFirst().id);
+        RequestVoteEvent event = new RequestVoteEvent(req, peerChannel);
 
         follower.handle(event);
 
-        RequestVoteReply reply = channel.readOutbound();
+        RequestVoteReply reply = peerChannel.readOutbound();
         assertEquals(new RequestVoteReply(node.currentTerm, false), reply);
         assertEquals(node.state, NodeState.FOLLOWER());
     }
@@ -181,21 +176,20 @@ public class FollowerTest extends NodeStateTest{
     @SneakyThrows
     public void follower_should_not_grant_vote_when_candidates_last_log_term_entry_is_not_up_to_date(){
         node.currentTerm = 3;
-        InetSocketAddress rquestorId = new InetSocketAddress("localhost", 9001);
-        Peer peer = new Peer(rquestorId, node, group);
-        peer.channel = channel;
-        node.activePeers.put(rquestorId, peer);
+
+        follower.handle(new PeerConnectedEvent(peers.getFirst()));
+
         node.log.add(new LogEntry(1, new Set(5).serialize()), 1);
         node.log.add(new LogEntry(2, new Add(2).serialize()), 2);
         node.log.add(new LogEntry(3, new Multiply(3).serialize()), 3);
         node.log.add(new LogEntry(3, new Subtract(1).serialize()), 4);
 
-        RequestVote req = new RequestVote(3, 3, 1, rquestorId);
-        RequestVoteEvent event = new RequestVoteEvent(req, channel);
+        RequestVote req = new RequestVote(3, 3, 1, peers.getFirst().id);
+        RequestVoteEvent event = new RequestVoteEvent(req, peerChannel);
 
         follower.handle(event);
 
-        RequestVoteReply reply = channel.readOutbound();
+        RequestVoteReply reply = peerChannel.readOutbound();
         assertEquals(new RequestVoteReply(node.currentTerm, false), reply);
         assertEquals(node.state, NodeState.FOLLOWER());
     }
@@ -204,21 +198,20 @@ public class FollowerTest extends NodeStateTest{
     @SneakyThrows
     public void follower_should_not_grant_vote_when_candidates_last_log_index_is_not_up_to_date(){
         node.currentTerm = 3;
-        InetSocketAddress rquestorId = new InetSocketAddress("localhost", 9001);
-        Peer peer = new Peer(rquestorId, node, group);
-        peer.channel = channel;
-        node.activePeers.put(rquestorId, peer);
+
+        follower.handle(new PeerConnectedEvent(peers.getFirst()));
+
         node.log.add(new LogEntry(1, new Set(5).serialize()), 1);
         node.log.add(new LogEntry(2, new Add(2).serialize()), 2);
         node.log.add(new LogEntry(3, new Multiply(3).serialize()), 3);
         node.log.add(new LogEntry(3, new Subtract(1).serialize()), 4);
 
-        RequestVote req = new RequestVote(3, 3, 3, rquestorId);
-        RequestVoteEvent event = new RequestVoteEvent(req, channel);
+        RequestVote req = new RequestVote(3, 3, 3, peers.getFirst().id);
+        RequestVoteEvent event = new RequestVoteEvent(req, peerChannel);
 
         follower.handle(event);
 
-        RequestVoteReply reply = channel.readOutbound();
+        RequestVoteReply reply = peerChannel.readOutbound();
         assertEquals(new RequestVoteReply(node.currentTerm, false), reply);
         assertEquals(node.state, NodeState.FOLLOWER());
     }
@@ -227,20 +220,19 @@ public class FollowerTest extends NodeStateTest{
     @SneakyThrows
     public void grant_vote_when_all_conditions_are_met(){
         node.currentTerm = 2;
-        InetSocketAddress rquestorId = new InetSocketAddress("localhost", 9001);
-        Peer peer = new Peer(rquestorId, node, group);
-        peer.channel = channel;
-        node.activePeers.put(rquestorId, peer);
+
+        follower.handle(new PeerConnectedEvent(peers.getFirst()));
+
         node.log.add(new LogEntry(1, new Set(5).serialize()), 1);
         node.log.add(new LogEntry(2, new Add(2).serialize()), 2);
 
 
-        RequestVote req = new RequestVote(3, 3, 3, rquestorId);
-        RequestVoteEvent event = new RequestVoteEvent(req, channel);
+        RequestVote req = new RequestVote(3, 3, 3, peers.getFirst().id);
+        RequestVoteEvent event = new RequestVoteEvent(req, peerChannel);
 
         follower.handle(event);
 
-        RequestVoteReply reply = channel.readOutbound();
+        RequestVoteReply reply = peerChannel.readOutbound();
         assertEquals(new RequestVoteReply(node.currentTerm, true), reply);
         assertEquals(node.state, NodeState.FOLLOWER());
     }
@@ -253,11 +245,11 @@ public class FollowerTest extends NodeStateTest{
 
         byte[] command = new Set(5).serialize();
         Request request = new Request(command);
-        ReceivedRequestEvent event = new ReceivedRequestEvent(request, channel);
+        ReceivedRequestEvent event = new ReceivedRequestEvent(request, nodeChannel);
 
         follower.handle(event);
 
-        Redirect reply = channel.readOutbound();
+        Redirect reply = nodeChannel.readOutbound();
 
         assertEquals(new Redirect(leaderId, request), reply);
     }

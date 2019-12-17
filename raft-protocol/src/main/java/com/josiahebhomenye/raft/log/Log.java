@@ -30,6 +30,10 @@ public class Log implements AutoCloseable, Iterable<LogEntry>{
         data.write(entry.serialize());
     }
 
+    public void add(LogEntry entry){
+        add(entry, getLastIndex() + 1);
+    }
+
     @SneakyThrows
     public LogEntry get(long index){
         if(index < 1 || index > size()) return null;

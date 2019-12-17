@@ -31,9 +31,10 @@ public class Peer {
 
     final ConnectionHandler connectionHandler = new ConnectionHandler();
     final PeerLogger logger = new PeerLogger(this);
+    private boolean stopping;
 
     public void connect(){
-        if(!stopped()) {
+        if(!stopped() || stopping) {
             Bootstrap bootstrap = new Bootstrap();
             ChannelFuture future = bootstrap
                     .group(group)
@@ -50,7 +51,7 @@ public class Peer {
     }
 
     public boolean stopped(){
-        return group.isShuttingDown() || group.isShutdown();
+        return group == null ||group.isShutdown();
     }
 
 
@@ -80,6 +81,11 @@ public class Peer {
         }
     }
 
+    public void handle(StopEvent event){
+        stopping = true;
+        handle(new CancelHeartbeatTimeoutEvent(id));
+    }
+
     @ChannelHandler.Sharable
     public class ConnectionHandler extends ChannelDuplexHandler {
 
@@ -105,8 +111,10 @@ public class Peer {
 
         @Override
         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-            Dynamic.invoke(Peer.this, "handle", evt);
-            ctx.fireUserEventTriggered(evt);
+            if(!stopped()) {
+                Dynamic.invoke(Peer.this, "handle", evt);
+                ctx.fireUserEventTriggered(evt);
+            }
         }
 
 

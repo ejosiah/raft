@@ -1,6 +1,7 @@
 package com.josiahebhomenye.test.support;
 
 import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 
 import java.util.ArrayList;
@@ -8,6 +9,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
+@ChannelHandler.Sharable
 public class UserEventCapture extends ChannelDuplexHandler {
 
     private List<Object> events = new ArrayList<>();

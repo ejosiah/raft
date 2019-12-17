@@ -9,6 +9,7 @@ import com.josiahebhomenye.raft.server.event.StateTransitionEvent;
 import com.josiahebhomenye.raft.server.support.ForceLeader;
 import com.josiahebhomenye.raft.server.support.LeaderStart;
 import com.josiahebhomenye.raft.server.support.TestEnd;
+import com.josiahebhomenye.raft.server.util.CheckedExceptionWrapper;
 import com.josiahebhomenye.test.support.StateDataSupport;
 import com.typesafe.config.ConfigFactory;
 import io.netty.channel.ChannelHandler;
@@ -26,7 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
-public class LogReplicationTest implements StateDataSupport {
+public class LogReplicationTest implements StateDataSupport, CheckedExceptionWrapper {
 
     ServerConfig config = new ServerConfig(ConfigFactory.load());
     Node leader;
@@ -160,7 +161,7 @@ public class LogReplicationTest implements StateDataSupport {
     @After
     public void tearDown(){
         nodes.forEach(node -> {
-           node.stop();
+           wrap(() -> node.stop().get());
            delete(node.config.logPath);
            delete(node.config.statePath);
         });

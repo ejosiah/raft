@@ -28,6 +28,7 @@ public class ExtraEntriesScenario extends RaftScenarios implements LogDomainSupp
             {
                 add(new LogEntry(8, new Set(24).serialize()));
                 add(new LogEntry(8, new Set(96).serialize()));
+                add(new LogEntry(8, new Set(5).serialize()));
             }
         };
     }

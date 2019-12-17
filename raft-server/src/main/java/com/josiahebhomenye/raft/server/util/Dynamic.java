@@ -26,7 +26,7 @@ public class Dynamic {
             log.debug("invoking {}.{}({})", target, methodName, Arrays.toString(args));
             return  method.map(m -> invoke(m, target, args));
         }catch (Exception ex){
-            log.warn("exception encountered trying to invoke {}.{}({}}", target, methodName, Arrays.toString(args));
+            log.warn("exception [{}] encountered trying to invoke {}.{}({}}", ex.getCause(), target, methodName, Arrays.toString(args));
             throw ex;
         }
     }
