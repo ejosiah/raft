@@ -7,15 +7,18 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
-public class Log implements AutoCloseable, Iterable<LogEntry>{
+public class Log implements AutoCloseable, Iterable<LogEntry>, Cloneable{
     private static final int INT_SIZE = 4;
     public static final int LONG_SIZE = 8;
     private RandomAccessFile data;
     private int entrySize;
     private int sizeOffset;
+    private String path;
 
     @SneakyThrows
     public Log(String path, int entrySize){
+        this.path = path;
+        this.entrySize = entrySize;
         data = new RandomAccessFile(path, "rwd");
         this.entrySize = entrySize;
         this.sizeOffset = entrySize + LONG_SIZE;
@@ -113,16 +116,27 @@ public class Log implements AutoCloseable, Iterable<LogEntry>{
         if (this == o) return true;
         if (!(o instanceof Log)) return false;
         Log log = (Log) o;
-        if(log.size() == 0) return false;
-        if(log.size() != this.size()) return false;
 
-        long lenght = data.length();
-        data.seek(0);
-        log.data.seek(0);
-        for(long i = 0; i < lenght; i++){
-            if(log.data.read() != data.read()) return false;
+        Log thisLog = clone();
+        Log otherLog = log.clone();
+
+        try {
+            if(otherLog.size() == 0) return false;
+            if(thisLog.size() != otherLog.size()) return false;
+
+            long length = thisLog.data.length();
+            thisLog.data.seek(0);
+            otherLog.data.seek(0);
+            for(long i = 0; i < length; i++){
+                if(thisLog.data.read() != otherLog.data.read()){
+                    return false;
+                }
+            }
+            return true;
+        } finally {
+            thisLog.close();
+            otherLog.close();
         }
-        return true;
     }
 
     @Override
@@ -141,5 +155,10 @@ public class Log implements AutoCloseable, Iterable<LogEntry>{
                 return get(++nextIndex);
             }
         };
+    }
+
+    @Override
+    protected Log clone() {
+        return new Log(path, entrySize);
     }
 }
