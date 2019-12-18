@@ -3,4 +3,5 @@ include 'raft-server'
 include 'raft-protocol'
 include 'test-support'
 include 'raft-client'
+include 'raft-system-test'
 
