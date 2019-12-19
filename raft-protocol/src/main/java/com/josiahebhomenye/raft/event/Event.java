@@ -17,4 +17,8 @@ public abstract class Event {
     public Event(SocketAddress source){
         this.source = source;
     }
+
+    public <T extends Event> T as(Class<T> clazz){
+        return clazz.cast(this);
+    }
 }

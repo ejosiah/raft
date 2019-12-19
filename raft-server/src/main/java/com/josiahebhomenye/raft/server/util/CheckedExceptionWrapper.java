@@ -11,7 +11,7 @@ public interface CheckedExceptionWrapper {
     }
 
     @SneakyThrows
-    default void wrap(CheckedRunnable runnable){
+    default void uncheck(CheckedRunnable runnable){
         runnable.run();
     }
 }

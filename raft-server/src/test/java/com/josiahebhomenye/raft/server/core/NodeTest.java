@@ -22,6 +22,7 @@ import java.util.Collections;
 
 import static org.junit.Assert.*;
 
+// TODO change to integration test
 public class NodeTest implements StateDataSupport, LogDomainSupport {
 
     Node node;
