@@ -48,7 +48,7 @@ public class LeaderElectionTest implements StateDataSupport {
 
         testLatch = new CountDownLatch(1);
         nodeLatch = new CountDownLatch(1);
-        userEventCapture.ignore(PeerConnectedEvent.class, AppendEntriesEvent.class, RequestVoteReplyEvent.class);
+        userEventCapture.ignore(BindEvent.class, PeerConnectedEvent.class, AppendEntriesEvent.class, RequestVoteReplyEvent.class);
 
         config.peers.forEach(address -> peers.add(new RemotePeerMock(address, config.id)));
         peers.forEach(RemotePeerMock::start);

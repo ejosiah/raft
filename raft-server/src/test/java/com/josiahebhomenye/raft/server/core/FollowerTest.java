@@ -97,6 +97,42 @@ public class FollowerTest extends NodeStateTest{
     }
 
     @Test
+    public void append_new_entries_not_already_in_the_log(){
+        node.currentTerm = 2;
+        long leaderTerm = 3;
+        long leaderCommit = 5;
+        long prevLogIndex = 4;
+        long prevLogTerm = 2;
+
+
+        node.log.add(new LogEntry(1, new Set(5).serialize()), 1);
+        node.log.add(new LogEntry(2, new Add(1).serialize()), 2);
+        node.log.add(new LogEntry(2, new Set(1).serialize()), 3);
+        node.log.add(new LogEntry(2, new Add(1).serialize()), 4);
+
+        List<byte[]> entries = new ArrayList<>();
+        entries.add(new LogEntry(3, new Add(3).serialize()).serialize());
+        entries.add(new LogEntry(3, new Add(1).serialize()).serialize());
+        entries.add(new LogEntry(3, new Add(4).serialize()).serialize());
+
+        AppendEntries appendEntries = new AppendEntries(leaderTerm, prevLogIndex, prevLogTerm, leaderCommit, leaderId, entries);
+
+        follower.handle(new AppendEntriesEvent(appendEntries, nodeChannel));
+
+        assertEquals(7, node.log.size());
+        assertEquals(new LogEntry(3, new Add(4).serialize()), node.log.lastEntry());
+
+        CommitEvent expectedCommitEvent = new CommitEvent(leaderCommit, node.id);
+
+        assertEquals(expectedCommitEvent, userEventCapture.get(CommitEvent.class).get());
+
+        AppendEntriesReply expected = new AppendEntriesReply(leaderTerm, true);
+        AppendEntriesReply actual = nodeChannel.readOutbound();
+
+        assertEquals(expected, actual);
+    }
+
+    @Test
     public void initialization_should_schedule_election_timeout() throws Exception{
         follower.init();
 
@@ -235,6 +271,34 @@ public class FollowerTest extends NodeStateTest{
         RequestVoteReply reply = peerChannel.readOutbound();
         assertEquals(new RequestVoteReply(node.currentTerm, true), reply);
         assertEquals(node.state, NodeState.FOLLOWER());
+    }
+
+    @Test
+    public void only_grant_one_vote(){
+        node.currentTerm = 0;
+        follower.handle(new PeerConnectedEvent(peers.getFirst()));
+        follower.handle(new PeerConnectedEvent(peers.getLast()));
+
+        RequestVote req = new RequestVote(1, 0, 0, peers.getFirst().id);
+        RequestVoteEvent event = new RequestVoteEvent(req, peerChannel);
+
+        follower.handle(event);
+
+        RequestVoteReply reply = peerChannel.readOutbound();
+        assertEquals(new RequestVoteReply(node.currentTerm, true), reply);
+
+
+        req = new RequestVote(1, 0, 0, peers.getLast().id);
+        event = new RequestVoteEvent(req, peerChannel);
+
+        follower.handle(event);
+
+        reply = peerChannel.readOutbound();
+        assertEquals(new RequestVoteReply(node.currentTerm, false), reply);
+
+
+        assertEquals(node.state, NodeState.FOLLOWER());
+
     }
 
     @Test

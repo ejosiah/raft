@@ -21,4 +21,8 @@ public class RequestVoteReplyEvent extends Event {
         this.reply = reply;
         this.sender = sender;
     }
+
+    public boolean voteGranted(){
+        return reply.isVoteGranted();
+    }
 }

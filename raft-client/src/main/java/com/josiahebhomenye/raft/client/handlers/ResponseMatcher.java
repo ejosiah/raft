@@ -1,10 +1,12 @@
 package com.josiahebhomenye.raft.client.handlers;
 
 import com.josiahebhomenye.raft.client.PromiseRequest;
+import com.josiahebhomenye.raft.client.RejectRequestEvent;
 import com.josiahebhomenye.raft.client.Response;
 import io.netty.channel.*;
 import lombok.RequiredArgsConstructor;
 
+import java.nio.channels.ClosedChannelException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -40,12 +42,9 @@ public class ResponseMatcher extends ChannelDuplexHandler {
             Response resp = (Response)msg;
             if(pending.containsKey(resp.getCorrelationId())){
                 pending.remove(resp.getCorrelationId()).complete(resp);
-            }else{
-                ctx.fireChannelRead(msg);
             }
-        }else{
-            ctx.fireChannelRead(msg);
         }
+        ctx.fireChannelRead(msg);
     }
 
     @Override
@@ -54,6 +53,11 @@ public class ResponseMatcher extends ChannelDuplexHandler {
             RequestTimeoutEvent event = (RequestTimeoutEvent)evt;
             if(pending.containsKey(event.id)){
                 pending.remove(event.id) .completeExceptionally(new TimeoutException(String.format(TIMEOUT_MESSAGE, requestTimeout)));
+            }
+        }else if(evt instanceof RejectRequestEvent){
+            RejectRequestEvent event = (RejectRequestEvent)evt;
+            if(pending.containsKey(event.id())){
+                pending.remove(event.id()) .completeExceptionally(event.reason());
             }
         }
         ctx.fireUserEventTriggered(evt);

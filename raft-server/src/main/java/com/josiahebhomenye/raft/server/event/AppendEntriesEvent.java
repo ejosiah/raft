@@ -6,10 +6,12 @@ import io.netty.channel.Channel;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.With;
 import lombok.experimental.Accessors;
 
 
 @Data
+@With
 @NoArgsConstructor
 @Accessors(fluent = true)
 @EqualsAndHashCode(callSuper=false)

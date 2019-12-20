@@ -13,22 +13,26 @@ import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 public class LogTest implements StateDataSupport, LogDomainSupport {
 
     Log log;
+    Log otherLog;
 
     @Before
     public void setup(){
         log = new Log("log.dat", Command.SIZE);
+        otherLog = new Log("other.log.dat", Command.SIZE);
     }
 
     @After
     @SneakyThrows
     public void tearDown(){
         log.close();
+        otherLog.close();
         delete("log.dat");
+        delete("other.log.dat");
     }
 
     @Test
@@ -97,5 +101,16 @@ public class LogTest implements StateDataSupport, LogDomainSupport {
         List<LogEntry> actual = log.entriesFrom(3);
 
         assertEquals(expected, actual);
+    }
+
+    @Test
+    public void copy_contents_of_one_log_to_the_other(){
+        IntStream.range(0, logEntries().size()).forEach(i -> log.add(logEntries().get(i), i+1));
+
+        assertNotEquals(log, otherLog);
+
+        otherLog.copy(log);
+
+        assertEquals(log, otherLog);
     }
 }

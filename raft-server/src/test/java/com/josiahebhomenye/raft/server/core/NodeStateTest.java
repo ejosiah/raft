@@ -41,6 +41,8 @@ public abstract class NodeStateTest implements StateDataSupport {
     @Before
     @SneakyThrows
     public void setup0(){
+        delete(config.logPath);
+        delete(config.statePath);
         group = new DefaultEventLoopGroup();
         userEventCapture = new UserEventCapture();
         ServerConfig config = new ServerConfig(ConfigFactory.load());

@@ -1,6 +1,7 @@
 package com.josiahebhomenye.raft.server.core;
 
 
+import com.josiahebhomenye.raft.client.Request;
 import com.josiahebhomenye.raft.event.Event;
 import com.josiahebhomenye.raft.rpc.AppendEntries;
 import com.josiahebhomenye.raft.rpc.RequestVote;
@@ -19,7 +20,6 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.concurrent.ScheduledFuture;
 import lombok.Getter;
-import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 
@@ -38,7 +38,11 @@ import static com.josiahebhomenye.raft.server.core.NodeState.NULL_STATE;
 
 @Getter
 @Accessors(fluent = true)
+@ChannelHandler.Sharable
 public class Node extends ChannelDuplexHandler {
+
+    public static final String HANDLER_KEY = "NODE";
+
     long currentTerm;
     long commitIndex;
     long lastApplied;
@@ -54,9 +58,9 @@ public class Node extends ChannelDuplexHandler {
     ServerConfig config;
     Instant lastHeartbeat;
     InetSocketAddress id;
+
     InetSocketAddress leaderId;
     int votes;
-    ScheduledFuture<?> scheduledElectionTimeout;
     StateManager<?, ?> stateManager;
     StatePersistor statePersistor;
 
@@ -68,6 +72,10 @@ public class Node extends ChannelDuplexHandler {
 
     @SneakyThrows
     public Node(ServerConfig config){
+        initialize(config);
+    }
+
+    void initialize(ServerConfig config){
         this.state = NULL_STATE();
         this.state.set(this);
         this.config = config;
@@ -75,10 +83,12 @@ public class Node extends ChannelDuplexHandler {
         this.activePeers = new HashMap<>();
         this.peers = new ArrayList<>();
         this.votes = 0;
-        this.group = new NioEventLoopGroup();   // TODO read from config
+        this.group = new NioEventLoopGroup(1);   // TODO read from config
         this.clientGroup = new NioEventLoopGroup(3); // TODO read from config
         this.backgroundGroup = new DefaultEventLoopGroup(1); // TODO read from config
         this.statePersistor = new StatePersistor();
+        this.stopPromise = null;
+        this.stopping = false;
         initStateManager();
         initStateData();
     }
@@ -112,7 +122,7 @@ public class Node extends ChannelDuplexHandler {
             .handler(new ServerChannelInitializer(this))
             .childHandler(new ServerClientChannelInitializer(this))
             .localAddress(id)
-        .bind().sync();
+        .bind().sync(); // TODO change to future
     }
 
     public boolean alreadyVoted(){
@@ -179,14 +189,11 @@ public class Node extends ChannelDuplexHandler {
     }
 
     public void handle(ScheduleTimeoutEvent event){
-        if(cancelElectionTimeOut()) {
-            scheduledElectionTimeout = group.schedule(() -> trigger(new ElectionTimeoutEvent(lastHeartbeat, id))
-                    , event.timeout(), TimeUnit.MILLISECONDS);
-        }
+        group.schedule(() -> trigger(new ElectionTimeoutEvent(lastHeartbeat, id))
+                , event.timeout(), TimeUnit.MILLISECONDS);
     }
 
     public void handle(ElectionTimeoutEvent event){
-        scheduledElectionTimeout = null;
         state.handle(event);
     }
 
@@ -225,10 +232,10 @@ public class Node extends ChannelDuplexHandler {
     }
 
     public void applyLogEntries(){
-        while(commitIndex > lastApplied){
+        while(commitIndex > lastApplied){   // TODO apply the log entries in node.handle(ApplyEntryEvent)
             lastApplied++;
             LogEntry entry = log.get(lastApplied);
-            trigger(new ApplyEntryEvent(entry, id));
+            trigger(new ApplyEntryEvent(lastApplied, entry, id));
         }
     }
 
@@ -242,10 +249,14 @@ public class Node extends ChannelDuplexHandler {
 
     public void handle(StopEvent event){
         stopping = true;
-        cancelElectionTimeOut();
         broadcast(event);
+        activePeers.clear();
         log.close();
+        shutdown();
 
+    }
+
+    private void shutdown(){
         clientGroup.shutdownGracefully().addListener(f -> {
             if (f.isSuccess()) {
                 group.shutdownGracefully().addListener(ff -> {
@@ -259,7 +270,6 @@ public class Node extends ChannelDuplexHandler {
                 stopPromise.completeExceptionally(f.cause());
             }
         });
-
     }
 
     public void broadcast(Event event){
@@ -276,11 +286,6 @@ public class Node extends ChannelDuplexHandler {
         return config.electionTimeout.get();
     }
 
-    public boolean cancelElectionTimeOut(){
-        return scheduledElectionTimeout == null || (!scheduledElectionTimeout.isCancelled()
-                && scheduledElectionTimeout.isCancellable() && scheduledElectionTimeout.cancel(true));
-    }
-
     public long prevLogIndex(){
         return log.isEmpty() ? 0 : log.getLastIndex() - 1;
     }
@@ -294,13 +299,21 @@ public class Node extends ChannelDuplexHandler {
     }
 
     public void addPreProcessInterceptors(ChannelDuplexHandler... interceptors){
-        Arrays.stream(interceptors).filter(i -> i instanceof Interceptor).map(i -> (Interceptor)i).forEach(i -> i.node(this));
-        preProcessInterceptors.addAll(Arrays.asList(interceptors));
+        addPreProcessInterceptors(Arrays.asList(interceptors));
+    }
+
+    public void addPreProcessInterceptors(List<? extends ChannelDuplexHandler> interceptors){
+        interceptors.stream().filter(i -> i instanceof Interceptor).map(i -> (Interceptor)i).forEach(i -> i.node(this));
+        preProcessInterceptors.addAll(interceptors);
     }
 
     public void addPostProcessInterceptors(ChannelDuplexHandler... interceptors){
-        Arrays.stream(interceptors).filter(i -> i instanceof Interceptor).map(i -> (Interceptor)i).forEach(i -> i.node(this));
-        postProcessInterceptors.addAll(Arrays.asList(interceptors));
+        addPostProcessInterceptors(Arrays.asList(interceptors));
+    }
+
+    public void addPostProcessInterceptors(List<? extends ChannelDuplexHandler> interceptors){
+        interceptors.stream().filter(i -> i instanceof Interceptor).map(i -> (Interceptor)i).forEach(i -> i.node(this));
+        postProcessInterceptors.addAll(interceptors);
     }
 
     public boolean receivedHeartbeatSinceLast(Instant heartbeat){
@@ -345,13 +358,31 @@ public class Node extends ChannelDuplexHandler {
         return log.entriesFrom(index).stream().map(LogEntry::serialize).collect(Collectors.toList());
     }
 
-    private boolean stopped() {
+    public boolean stopped() {
         return stopPromise != null && stopPromise.isDone();
+    }
+
+    public void restart() {
+        initialize(config);
+        start();
     }
 
     @Override
     public String toString() {
-        return String.format("Node{id: %s, state: %s]", id, state);
+        return String.format("Node{id: %s, state: %s, term: %s commitIndex: %s, offline: %b]"
+                , id, state, currentTerm, commitIndex, stopped() );
+    }
+
+    public boolean isFollower(){
+        return state.isFollower();
+    }
+
+    public boolean isCandidate(){
+        return state.isCandidate();
+    }
+
+    public boolean isLeader() {
+        return state.isLeader();
     }
 
     @Sharable
@@ -363,6 +394,11 @@ public class Node extends ChannelDuplexHandler {
                 trigger(new AppendEntriesEvent((AppendEntries)msg, ctx.channel()));
             }else if(msg instanceof RequestVote){
                 trigger(new RequestVoteEvent((RequestVote)msg, ctx.channel()));
+            }else if(msg instanceof Request){
+                trigger(new ReceivedRequestEvent((Request)msg, ctx.channel()));
+            }
+            else {
+                ctx.fireUserEventTriggered(new UnhandledMessageEvent(msg, ctx.channel()));
             }
         }
     }
@@ -409,4 +445,21 @@ public class Node extends ChannelDuplexHandler {
             return false;
         }
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Node node = (Node) o;
+        return currentTerm == node.currentTerm &&
+                (votedFor != null &&votedFor.equals(node.votedFor)) &&
+                log.equals(node.log) &&
+                id.equals(node.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(currentTerm, votedFor, log, id);
+    }
+
 }

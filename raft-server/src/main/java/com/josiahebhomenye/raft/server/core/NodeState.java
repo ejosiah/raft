@@ -1,7 +1,10 @@
 package com.josiahebhomenye.raft.server.core;
 
+import com.josiahebhomenye.raft.client.Response;
 import com.josiahebhomenye.raft.rpc.AppendEntriesReply;
 import com.josiahebhomenye.raft.server.event.*;
+import lombok.Getter;
+import lombok.experimental.Accessors;
 
 import java.util.Objects;
 
@@ -13,19 +16,23 @@ public abstract class NodeState {
     public static final Leader LEADER()  { return new Leader(); };
     public static final NodeState NULL_STATE() { return new NullState(); };
 
-    protected Node node;
+    public enum Id{FOLLOWER, CANDIDATE, LEADER, NOTHING}
 
+    @Getter
+    @Accessors(fluent = true)
+    protected Node node;
 
     public void transitionTo(NodeState newState){
         if(newState != this) {
-            newState.set(node);
+            newState.set(node); // FIXME remove this, Node handler of state transition will take care of this
             node.trigger(new StateTransitionEvent(this, newState, node.id));
         }
     }
 
-    public void set(Node node){
+    public NodeState set(Node node){
         node.state = this;
         this.node = node;
+        return this;
     }
 
     public void handle(AppendEntriesEvent event) {
@@ -58,7 +65,11 @@ public abstract class NodeState {
 
     }
 
-    public void handle(ReceivedRequestEvent event){}
+    public void handle(ReceivedRequestEvent event){
+        if(node.leaderId == null){
+            event.sender().writeAndFlush(Response.fail(event.request().getId(), "no leader elected yet".getBytes()));
+        }
+    }
 
     public String name(){
         return this.getClass().getSimpleName();
@@ -71,6 +82,22 @@ public abstract class NodeState {
 
     public void handle(AppendEntriesReplyEvent event){
 
+    }
+
+    public Id id(){
+        return Id.NOTHING;
+    }
+
+    public boolean isFollower(){
+        return false;
+    }
+
+    public boolean isCandidate(){
+        return false;
+    }
+
+    public boolean isLeader(){
+        return false;
     }
 
     @Override

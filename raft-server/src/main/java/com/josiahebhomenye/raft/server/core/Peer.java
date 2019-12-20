@@ -69,7 +69,7 @@ public class Peer {
 
     public void handle(CancelHeartbeatTimeoutEvent event){
         try {
-            channel.pipeline().remove("IdleStateHandler");
+            channel.pipeline().remove(IdleStateHandler.class);
         }catch (Exception ex){
             // no IdleStateHandler defined
         }
@@ -84,6 +84,7 @@ public class Peer {
     public void handle(StopEvent event){
         stopping = true;
         handle(new CancelHeartbeatTimeoutEvent(id));
+        channel.close();
     }
 
     @ChannelHandler.Sharable
@@ -120,7 +121,10 @@ public class Peer {
 
         @Override
         public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-            super.disconnect(ctx, promise); // TODO fire Channel Disconnected event and try to restart peer
+            if(!stopping) {
+                node.trigger(new PeerDisconnectedEvent(Peer.this));
+            }
+            super.disconnect(ctx, promise);
         }
     }
 

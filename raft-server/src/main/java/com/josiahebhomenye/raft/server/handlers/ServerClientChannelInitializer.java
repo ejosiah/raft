@@ -1,9 +1,11 @@
 package com.josiahebhomenye.raft.server.handlers;
 
 import com.josiahebhomenye.raft.server.core.Node;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import lombok.RequiredArgsConstructor;
 
+@ChannelHandler.Sharable
 @RequiredArgsConstructor
 public class ServerClientChannelInitializer extends ProtocolInitializer<NioSocketChannel> {
 

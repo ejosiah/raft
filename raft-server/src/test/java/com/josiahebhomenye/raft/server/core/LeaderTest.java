@@ -1,12 +1,14 @@
 package com.josiahebhomenye.raft.server.core;
 
 import com.josiahebhomenye.raft.client.Request;
+import com.josiahebhomenye.raft.client.Response;
 import com.josiahebhomenye.raft.rpc.Acknowledgement;
 import com.josiahebhomenye.raft.rpc.AppendEntries;
 import com.josiahebhomenye.raft.rpc.AppendEntriesReply;
 import com.josiahebhomenye.raft.comand.Set;
 import com.josiahebhomenye.raft.log.LogEntry;
 import com.josiahebhomenye.raft.server.event.*;
+import com.josiahebhomenye.test.support.LogDomainSupport;
 import org.junit.Test;
 
 import java.util.*;
@@ -14,7 +16,7 @@ import java.util.*;
 import static org.junit.Assert.*;
 import static com.josiahebhomenye.raft.server.core.NodeState.*;
 
-public class LeaderTest extends NodeStateTest {
+public class LeaderTest extends NodeStateTest implements LogDomainSupport {
 
     Leader leader;
 
@@ -51,7 +53,8 @@ public class LeaderTest extends NodeStateTest {
 
         leader.handle(event);
 
-        assertEquals(Acknowledgement.successful(), clientChannel.readOutbound());
+        Response response = clientChannel.readOutbound();
+        assertEquals(request.getId(), response.getCorrelationId());
 
 
         byte[] entry = new LogEntry(1, command).serialize();
@@ -62,6 +65,22 @@ public class LeaderTest extends NodeStateTest {
         assertEquals(expected, peerChannel.readOutbound());
         assertEquals(expected, peerChannel.readOutbound());
         assertEquals(expected, peerChannel.readOutbound());
+    }
+
+    @Test
+    public void do_not_commit_log_if_unable_to_replicate_to_majority(){
+        node.currentTerm = 6;
+        node.id = leaderId;
+        leaderEntries().forEach(node.log::add);
+
+        peers.stream().limit(2).forEach(peer -> node.trigger(new PeerConnectedEvent(peer)));
+
+        AppendEntriesReplyEvent event = new AppendEntriesReplyEvent(new AppendEntriesReply(1, true), peers.get(0));
+
+        leader.handle(event);
+        leader.handle(event.withSender(peers.get(1)).withMsg(event.msg().withSuccess(false)));
+
+        assertFalse(userEventCapture.get(CommitEvent.class).isPresent());
     }
 
     @Test

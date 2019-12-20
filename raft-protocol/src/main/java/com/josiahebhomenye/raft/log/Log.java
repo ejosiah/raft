@@ -1,15 +1,18 @@
 package com.josiahebhomenye.raft.log;
 
 import lombok.SneakyThrows;
-import java.io.RandomAccessFile;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Random;
+import lombok.extern.slf4j.Slf4j;
 
+import java.io.RandomAccessFile;
+import java.util.*;
+
+@Slf4j
 public class Log implements AutoCloseable, Iterable<LogEntry>, Cloneable{
     private static final int INT_SIZE = 4;
     public static final int LONG_SIZE = 8;
+    private static final int KILO_BYTE = 1024;
+    private static final int MEGA_BYTE = KILO_BYTE * KILO_BYTE;
+    public static final int END_OF_FILE = -1;
     private RandomAccessFile data;
     private int entrySize;
     private int sizeOffset;
@@ -19,13 +22,14 @@ public class Log implements AutoCloseable, Iterable<LogEntry>, Cloneable{
     public Log(String path, int entrySize){
         this.path = path;
         this.entrySize = entrySize;
-        data = new RandomAccessFile(path, "rwd");
+        data = new RandomAccessFile(path, "rw");
         this.entrySize = entrySize;
         this.sizeOffset = entrySize + LONG_SIZE;
     }
 
     @SneakyThrows
     public void add(LogEntry entry, long index){
+        log.debug("adding {} at index {}", entry, index);
         if(index < 1) throw new IllegalArgumentException("index: " + index + ", cannot less than one");
         if(entry == null) throw new IllegalArgumentException("command cannot be null");
         data.seek((index - 1) * sizeOffset);
@@ -127,10 +131,17 @@ public class Log implements AutoCloseable, Iterable<LogEntry>, Cloneable{
             long length = thisLog.data.length();
             thisLog.data.seek(0);
             otherLog.data.seek(0);
-            for(long i = 0; i < length; i++){
-                if(thisLog.data.read() != otherLog.data.read()){
-                    return false;
-                }
+
+            byte[] thisBuf = new byte[Math.min((int)length, MEGA_BYTE)];    // FIXME truncation of long due to cast
+            byte[] otherBuf = new byte[Math.min((int)length, MEGA_BYTE)];    // FIXME truncation of long due to cast
+
+            while(true){
+                int read = thisLog.data.read(thisBuf);
+                otherLog.data.read(otherBuf);
+
+                if(read == END_OF_FILE) break;
+
+                if(!Arrays.equals(thisBuf, otherBuf)) return false;
             }
             return true;
         } finally {
@@ -158,7 +169,25 @@ public class Log implements AutoCloseable, Iterable<LogEntry>, Cloneable{
     }
 
     @Override
-    protected Log clone() {
+    public Log clone() {
         return new Log(path, entrySize);
+    }
+
+    @SneakyThrows
+    public void copy(Log log){
+
+        try(Log otherLog = log.clone()){
+            data.setLength(0);
+            data.seek(0);
+            otherLog.data.seek(0);
+
+            long length = otherLog.data.length();
+            byte[] buf = new byte[Math.min((int)length, MEGA_BYTE)];
+            int read;
+
+            while((read = otherLog.data.read(buf)) != END_OF_FILE){
+                data.write(buf, 0, read);
+            }
+        }
     }
 }

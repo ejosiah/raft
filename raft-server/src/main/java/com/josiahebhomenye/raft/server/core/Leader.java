@@ -1,5 +1,6 @@
 package com.josiahebhomenye.raft.server.core;
 
+import com.josiahebhomenye.raft.client.Response;
 import com.josiahebhomenye.raft.rpc.Acknowledgement;
 import com.josiahebhomenye.raft.rpc.AppendEntries;
 import com.josiahebhomenye.raft.server.event.*;
@@ -12,6 +13,7 @@ public class Leader extends NodeState {
 
     @Override
     public void init() {
+        node.activePeers.values().forEach(node::sendAppendEntriesTo);
         node.trigger(new ScheduleHeartbeatTimeoutEvent(node.id, node.nextHeartbeatTimeout()));
     }
 
@@ -32,7 +34,7 @@ public class Leader extends NodeState {
     @Override
     public void handle(ReceivedRequestEvent event) {
         node.add(event.request().getBody());
-        event.sender().writeAndFlush(Acknowledgement.successful()); // TODO Don't reply the sender reply downstream
+        event.sender().writeAndFlush(Response.empty(event.request().getId(), true)); // TODO Don't reply the sender reply downstream
         node.replicate();   // TODO don't send if previously sent pending response
     }
 
@@ -46,7 +48,7 @@ public class Leader extends NodeState {
     public void handle(AppendEntriesReplyEvent event) {
         if(event.msg().isSuccess()){
             event.sender().matchIndex = event.sender().nextIndex; // TODO check this is right
-            event.sender().nextIndex = node.log.getLastIndex() + 1;
+            event.sender().nextIndex++;
 
             long lastCommitIndex = node.commitIndex;
             long lastLogIndex = node.log.getLastIndex(); // TODO cache this
@@ -86,6 +88,16 @@ public class Leader extends NodeState {
     }
 
     private boolean replicatedOnMajority(int replicated){
-        return replicated >= node.config.majority || (float)(replicated/node.activePeers.size()) >= 0.5;
+        return replicated >= node.config.majority;
+    }
+
+    @Override
+    public boolean isLeader() {
+        return true;
+    }
+
+    @Override
+    public Id id() {
+        return Id.LEADER;
     }
 }

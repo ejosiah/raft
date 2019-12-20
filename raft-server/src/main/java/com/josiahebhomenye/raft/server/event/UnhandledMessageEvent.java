@@ -1,6 +1,5 @@
 package com.josiahebhomenye.raft.server.event;
 
-import com.josiahebhomenye.raft.client.Request;
 import com.josiahebhomenye.raft.event.Event;
 import io.netty.channel.Channel;
 import lombok.Data;
@@ -8,17 +7,16 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
+
 @Data
 @NoArgsConstructor
 @Accessors(fluent = true)
-@EqualsAndHashCode(callSuper=false, exclude = {"sender"})
-public class ReceivedRequestEvent extends Event {
-    private Channel sender;
-    private Request request;
+@EqualsAndHashCode(callSuper=false)
+public class UnhandledMessageEvent extends Event {
+    private Object msg;
 
-    public ReceivedRequestEvent(Request request, Channel sender){
+    public  UnhandledMessageEvent(Object msg, Channel sender){
         super(sender.remoteAddress());
-        this.request = request;
-        this.sender = sender;
+        this.msg = msg;
     }
 }

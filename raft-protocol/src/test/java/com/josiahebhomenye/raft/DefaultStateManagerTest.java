@@ -49,8 +49,8 @@ public class DefaultStateManagerTest implements LogDomainSupport, StateDataSuppo
         IntStream.rangeClosed(1, entries.size()).forEach(i -> log.add(entries.get(i-1), i));
 
 
-        for(LogEntry entry : log) {
-            channel.pipeline().fireUserEventTriggered(new ApplyEntryEvent(entry, null));
+        for(long i = 1; i <= log.size(); i++) {
+            channel.pipeline().fireUserEventTriggered(new ApplyEntryEvent(i, log.get(i), null));
 
         }
 

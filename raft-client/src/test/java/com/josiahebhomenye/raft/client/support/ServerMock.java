@@ -25,6 +25,7 @@ public class ServerMock {
     private EventLoopGroup group = new NioEventLoopGroup(1);
     public List<Object> receivedMessages = new ArrayList<>();
 
+    @ChannelHandler.Sharable
     private class MessageHandler extends ChannelDuplexHandler{
         BiConsumer<ChannelHandlerContext, Request> onRequest = (ctx, obj) -> {};
 

@@ -35,4 +35,14 @@ public class Candidate extends NodeState {
     private boolean receivedMajorityVotes(){
         return node.votes >= node.config.majority || (float)(node.votes/node.activePeers.size()) >= 0.5;
     }
+
+    @Override
+    public boolean isCandidate() {
+        return true;
+    }
+
+    @Override
+    public Id id() {
+        return Id.CANDIDATE;
+    }
 }
