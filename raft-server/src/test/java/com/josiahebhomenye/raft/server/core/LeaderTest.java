@@ -172,4 +172,9 @@ public class LeaderTest extends NodeStateTest implements LogDomainSupport {
 
         assertTrue("CancelHeartbeatTimeoutEvent was not triggered", event.isPresent());
     }
+
+    @Test
+    public void grant_vote_for_candidate_of_higher_terms_and_step_down(){
+        fail("Not yet implemented");
+    }
 }
