@@ -27,12 +27,14 @@ public class RaftClientTest {
     ServerMock serverMock1;
     ClientConfig config;
     RaftClient<String> raftClient;
+    long timeout;
 
     @Before
     public void setup() throws Exception{
         config = new ClientConfig(ConfigFactory.load()).withEntrySerializerClass(StringEntrySerializer.class);
         serverMock = new ServerMock(config.servers.get(0));
         raftClient = new RaftClient<>(config);
+        timeout = config.requestTimeout + 1000;
         serverMock.start();
         raftClient.start();
     }
@@ -65,8 +67,8 @@ public class RaftClientTest {
     public void timeout_when_server_does_not_respond() throws Exception{
 
         try {
-            raftClient.send("RADIO CHECK").get(5000, TimeUnit.MILLISECONDS);
-        }catch(ExecutionException ex){
+            raftClient.send("RADIO CHECK").get(timeout, TimeUnit.MILLISECONDS);
+        }catch(Exception ex){
             assertEquals("did not receive response from server after " + config.requestTimeout + " ms", ex.getCause().getMessage());
         }
     }
@@ -97,7 +99,7 @@ public class RaftClientTest {
     public void throw_connection_exception_when_channel_is_offline() throws Throwable{
         serverMock.stop();
         try {
-            raftClient.send("RADIO CHECK").get(5000, TimeUnit.MILLISECONDS);
+            raftClient.send("RADIO CHECK").get(timeout, TimeUnit.MILLISECONDS);
         } catch (Exception e) {
             throw e.getCause();
         }
@@ -125,7 +127,7 @@ public class RaftClientTest {
         });
 
         try {
-            raftClient.send("RADIO CHECK").get(5000, TimeUnit.SECONDS);
+            raftClient.send("RADIO CHECK").get(timeout, TimeUnit.SECONDS);
         } catch (Exception e) {
             throw e.getCause();
         }
@@ -143,7 +145,7 @@ public class RaftClientTest {
         CompletableFuture<Response> future = raftClient.send("RADIO CHECK");
 
         String expected = "ROGER, OVER AND OUT";
-        String actual = new String(future.get().getBody());
+        String actual = new String(future.get(timeout, TimeUnit.MILLISECONDS).getBody());
 
         assertEquals("server did not respond as expected",expected, actual);
     }

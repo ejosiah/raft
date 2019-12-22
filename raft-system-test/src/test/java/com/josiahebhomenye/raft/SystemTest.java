@@ -52,8 +52,8 @@ public class SystemTest implements CheckedExceptionWrapper, StateDataSupport {
         guard = new Semaphore(1);
 
         guarantees.add(new ElectionSafetyGuarantee(nodes, testLatch, config.majority).setup());
-  //      guarantees.add(new LeaderAppendOnlyGuarantee(nodes, testLatch).setup());
-        // TODO missing log matching entry
+        guarantees.add(new LeaderAppendOnlyGuarantee(nodes, testLatch).setup());
+        guarantees.add(new LogMatchingGuarantee(nodes, testLatch).setup());
         guarantees.add(new LeaderCompletenessGuarantee(nodes, testLatch).setup());
         guarantees.add(new StateMachineSafetyGuarantee(nodes, testLatch).setup());
 

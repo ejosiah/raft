@@ -41,6 +41,11 @@ public class ServerMock {
                 onRequest.accept(ctx, (Request) msg);
             }
         }
+
+        @Override
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            super.userEventTriggered(ctx, evt);
+        }
     }
 
 

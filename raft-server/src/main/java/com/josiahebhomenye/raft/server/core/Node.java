@@ -61,6 +61,7 @@ public class Node extends ChannelDuplexHandler {
 
     InetSocketAddress leaderId;
     int votes;
+    ScheduledFuture<?> scheduledElectionTimeout;
     StateManager<?, ?> stateManager;
     StatePersistor statePersistor;
 
@@ -89,6 +90,7 @@ public class Node extends ChannelDuplexHandler {
         this.statePersistor = new StatePersistor();
         this.stopPromise = null;
         this.stopping = false;
+        this.lastHeartbeat = Instant.EPOCH;
         initStateManager();
         initStateData();
     }
@@ -189,8 +191,10 @@ public class Node extends ChannelDuplexHandler {
     }
 
     public void handle(ScheduleTimeoutEvent event){
-        group.schedule(() -> trigger(new ElectionTimeoutEvent(lastHeartbeat, id))
-                , event.timeout(), TimeUnit.MILLISECONDS);
+        cancelElectionTimeOut();
+        Instant prevLastHeartbeat = this.lastHeartbeat;
+        scheduledElectionTimeout = group.schedule(() -> trigger(new ElectionTimeoutEvent(prevLastHeartbeat, id))
+                , event.timeout(), event.unit());
     }
 
     public void handle(ElectionTimeoutEvent event){
@@ -242,13 +246,13 @@ public class Node extends ChannelDuplexHandler {
     public void handle(PeerConnectedEvent event){
         Peer peer = event.peer();
         peer.nextIndex = log.getLastIndex() + 1;
-        peer.matchIndex = 0;
-        activePeers.put(event.peer().id, event.peer());
+        activePeers.put(event.peer().id, peer);
         state.handle(event);
     }
 
     public void handle(StopEvent event){
         stopping = true;
+        cancelElectionTimeOut();
         broadcast(event);
         activePeers.clear();
         log.close();
@@ -286,6 +290,13 @@ public class Node extends ChannelDuplexHandler {
         return config.electionTimeout.get();
     }
 
+    public void cancelElectionTimeOut(){
+        if(scheduledElectionTimeout != null){
+            scheduledElectionTimeout.cancel(true);
+            scheduledElectionTimeout = null;
+        }
+    }
+
     public long prevLogIndex(){
         return log.isEmpty() ? 0 : log.getLastIndex() - 1;
     }
@@ -317,7 +328,13 @@ public class Node extends ChannelDuplexHandler {
     }
 
     public boolean receivedHeartbeatSinceLast(Instant heartbeat){
-        return lastHeartbeat != null && heartbeat != null && heartbeat.isBefore(lastHeartbeat);
+        Instant prevLastHeartbeat = ensureValue(heartbeat);
+        Instant curLastHeartbeat = ensureValue(lastHeartbeat);
+        return prevLastHeartbeat.isBefore(curLastHeartbeat);
+    }
+
+    private Instant ensureValue(Instant instant){
+        return instant == null ? Instant.EPOCH : instant;
     }
 
     public void add(byte[] entry) {

@@ -45,13 +45,13 @@ public abstract class Guarantee extends Interceptor {
 
             if(evt instanceof StateTransitionEvent){
                 StateTransitionEvent event = (StateTransitionEvent)evt;
-                if(event.newState().equals(NodeState.LEADER())){
+                if(event.newState().isLeader()){
                     leader = event.oldState().node();
                 }
             }
             if(evt instanceof Event){
                 synchronized (this) {
-                    check(ctx, (Event) evt);
+                    check(source(ctx), (Event) evt);
                 }
             }
         }
@@ -59,11 +59,13 @@ public abstract class Guarantee extends Interceptor {
     }
 
     public boolean passed(){
-        if(!receivedExpectedEvent) throw new IllegalStateException(String.format("%s did not execute", getClass().getSimpleName()));
+        if(!receivedExpectedEvent){
+            throw new IllegalStateException(String.format("%s did not execute", getClass().getSimpleName()));
+        }
         return !failed;
     }
 
-    protected abstract void check(ChannelHandlerContext ctx, Event event);
+    protected abstract void check(Node source, Event event);
 
     public Guarantee setup(){
         return this;

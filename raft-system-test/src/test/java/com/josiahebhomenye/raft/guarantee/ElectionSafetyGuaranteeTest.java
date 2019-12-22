@@ -43,13 +43,32 @@ public class ElectionSafetyGuaranteeTest extends GuaranteeTest {
     }
 
     @Test
+    public void pass_if_previous_leader_online_and_new_leader_elected_for_higher_term() throws Exception{
+        grantVote(nodes.getLast());
+        electAsLeader(nodes.getFirst());
+        revertToFollower(nodes.getLast());
+
+        nodes.getFirst().stop().get();
+        electAsLeader(nodes.getLast());
+
+        assertTrue(guarantee.passed());
+    }
+
+    private void revertToFollower(Node candidate) {
+        if(!candidate.isFollower()){
+            candidate.trigger(new StateTransitionEvent(candidate.state(), FOLLOWER(), candidate.id()));
+        }
+    }
+
+    @Test
     public void rest_votes_when_leader_elected() throws Exception{
 
         electAsLeader(nodes.getFirst());
         grantVote(nodes.getLast());
+
         declineVote(nodes.getLast(), 1);
 
-        assertEquals(4, guarantee.totalVotes());
+        assertEquals(5, guarantee.totalVotes());
 
         assertTrue(guarantee.passed());
 
@@ -74,20 +93,26 @@ public class ElectionSafetyGuaranteeTest extends GuaranteeTest {
     }
 
     private void grantVote(Node candidate){
+        if(!candidate.isCandidate()){
+            candidate.trigger(new StateTransitionEvent(candidate.state(), CANDIDATE(), candidate.id()));
+        }
         RequestVoteReply vote = new RequestVoteReply(1, true);
         candidate.trigger(new RequestVoteReplyEvent(vote, clientChannel));
     }
 
     private void electAsLeader(Node candidate){
-        electAsLeader(candidate, config.majority);
+        electAsLeader(candidate, config.majority - 1);
     }
 
     private void electAsLeader(Node candidate, int count){
+        if(!candidate.isCandidate()){
+            candidate.trigger(new StateTransitionEvent(candidate.state(), CANDIDATE(), candidate.id()));
+        }
         IntStream.range(0, count).forEach(i -> {
             RequestVoteReply vote = new RequestVoteReply(1, true);
             candidate.trigger(new RequestVoteReplyEvent(vote, clientChannel));
-            candidate.trigger(new StateTransitionEvent(FOLLOWER().set(candidate), LEADER(), null));
         });
+        candidate.trigger(new StateTransitionEvent(FOLLOWER().set(candidate), LEADER(), candidate.id()));
     }
 
     private void declineVote(Node candidate){
@@ -95,18 +120,21 @@ public class ElectionSafetyGuaranteeTest extends GuaranteeTest {
     }
 
     private void declineVote(Node candidate, int count){
+        if(!candidate.isCandidate()){
+            candidate.trigger(new StateTransitionEvent(candidate.state(), CANDIDATE(), candidate.id()));
+        }
         IntStream.range(0, count).forEach(i -> {
             RequestVoteReply vote = new RequestVoteReply(1, false);
             candidate.trigger(new RequestVoteReplyEvent(vote, clientChannel));
-            if(count > 1) {
-                candidate.trigger(new StateTransitionEvent(CANDIDATE().set(candidate), FOLLOWER(), null));
-            }
         });
+        if(count > 1) {
+            candidate.trigger(new StateTransitionEvent(CANDIDATE().set(candidate), FOLLOWER(), null));
+        }
     }
 
     private void startLeadDuties(Node leader){
         AppendEntries heartbeat = AppendEntries.heartbeat(1, 0, 0, 0, nodes.getFirst().id());
-        AppendEntriesEvent event = new AppendEntriesEvent(heartbeat, null);
+        AppendEntriesEvent event = new AppendEntriesEvent(heartbeat, clientChannel);
         leader.trigger(event);
     }
 

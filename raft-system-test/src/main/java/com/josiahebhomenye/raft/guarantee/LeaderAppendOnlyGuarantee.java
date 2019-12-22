@@ -14,20 +14,21 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.function.Supplier;
 import java.util.stream.LongStream;
+
+/**
+ * a leader never overwrites or deletes entries in its log; it only appends new entries
+ */
 
 @Slf4j
 @ChannelHandler.Sharable
 public class LeaderAppendOnlyGuarantee extends Guarantee implements StateDataSupport {
 
-    static int id;
-    static{
-        id++;
-    }
-    public static final String LOG_PATH = String.format("append_only_log_check%s.log", id);
+    public static final String LOG_PATH = "append_only_log_check.log";
 
-    @Accessors(fluent = true)
     @Getter
+    @Accessors(fluent = true)
     Log logCopy;
 
     @Override
@@ -51,13 +52,13 @@ public class LeaderAppendOnlyGuarantee extends Guarantee implements StateDataSup
     }
 
     @Override
-    protected void check(ChannelHandlerContext ctx, Event event) {
-        if(event instanceof ReceivedRequestEvent && isFromLeader(ctx)){    // TODO use append log entries instead
-            logCopy.add(new LogEntry(leader.currentTerm(), ((ReceivedRequestEvent) event).request().getBody()));
+    protected void check(Node Source, Event event) {
+        if(event instanceof ReceivedRequestEvent && Source.isLeader()){
+            logCopy.add(new LogEntry(Source.currentTerm(), ((ReceivedRequestEvent) event).request().getBody()));
             receivedExpectedEvent = true;   // TODO move up to super class
             LongStream.range(0, logCopy.size()).forEach(i -> {
                 long atIndex = i + 1;
-                try(Log leaderLog = leader.log().clone()) {
+                try(Log leaderLog = Source.log().clone()) {
                     LogEntry prevLeaderEntry = logCopy.get(atIndex);
                     LogEntry leaderLogEntry = leaderLog.get(atIndex);
                     if(!prevLeaderEntry.equals(leaderLogEntry)){

@@ -18,6 +18,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
+import java.time.Instant;
 import java.util.Collections;
 
 import static org.junit.Assert.*;
@@ -134,6 +135,23 @@ public class NodeTest implements StateDataSupport, LogDomainSupport {
         channel.pipeline().fireUserEventTriggered(new AppendEntriesReplyEvent(new AppendEntriesReply(0, true), peer));
 
         assertEquals(0, captureDownstream.captured());
+    }
+
+    @Test
+    public void election_timeout_should_contain_previous_last_heart_beat() throws Exception{
+        Instant prevLastHeartbeat = Instant.now();
+        node.lastHeartbeat = prevLastHeartbeat;
+        node.handle(new ScheduleTimeoutEvent(node.id, 1000));
+        Thread.sleep(200);
+        node.lastHeartbeat = Instant.now();
+        Thread.sleep(1000);
+
+        ElectionTimeoutEvent event = userEventCapture.get(ElectionTimeoutEvent.class).get();
+
+        Instant expected = prevLastHeartbeat;
+        Instant actual = event.lastheartbeat;
+
+        assertEquals(expected, actual);
     }
 
 }

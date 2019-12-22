@@ -15,7 +15,6 @@ import java.net.SocketAddress;
 @EqualsAndHashCode(callSuper=false)
 public class ApplyEntryEvent extends Event {
     private long index;
-    // FIXME don't send entry just send index, who ever needs it will have their own copy of the log
     private LogEntry entry;
 
     public ApplyEntryEvent(long index, LogEntry entry, SocketAddress source){

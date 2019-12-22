@@ -46,9 +46,8 @@ public class CandidateTest extends NodeStateTest {
 
     @Test
     public void become_leader_if_received_majority_votes(){
+        candidate.init();
         RequestVoteReply reply = new RequestVoteReply(1, true);
-        candidate.handle(new RequestVoteReplyEvent(reply, peerChannel));
-        assertEquals(CANDIDATE(), node.state);
 
         candidate.handle(new RequestVoteReplyEvent(reply, peerChannel));
         assertEquals(CANDIDATE(), node.state);
@@ -56,7 +55,7 @@ public class CandidateTest extends NodeStateTest {
         candidate.handle(new RequestVoteReplyEvent(reply, peerChannel));
         assertEquals(LEADER(), node.state);
 
-        StateTransitionEvent event = userEventCapture.get(0);
+        StateTransitionEvent event = userEventCapture.get(StateTransitionEvent.class).get();
         assertEquals(new StateTransitionEvent(CANDIDATE(), LEADER(), node.id), event);
     }
 

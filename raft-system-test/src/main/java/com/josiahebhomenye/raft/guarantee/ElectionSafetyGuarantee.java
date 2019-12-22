@@ -1,14 +1,13 @@
 package com.josiahebhomenye.raft.guarantee;
 
 import com.josiahebhomenye.raft.event.Event;
-import com.josiahebhomenye.raft.server.core.Leader;
 import com.josiahebhomenye.raft.server.core.Node;
-import com.josiahebhomenye.raft.server.core.NodeState;
 import com.josiahebhomenye.raft.server.event.AppendEntriesEvent;
 import com.josiahebhomenye.raft.server.event.RequestVoteReplyEvent;
 import com.josiahebhomenye.raft.server.event.StateTransitionEvent;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.InetSocketAddress;
@@ -18,14 +17,14 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
 
-import static com.josiahebhomenye.raft.server.core.NodeState.LEADER;
-import static java.util.stream.Collectors.toList;
-
+/**
+ * at most one leader can be elected in a given term.
+ */
 @Slf4j
 @ChannelHandler.Sharable
 public class ElectionSafetyGuarantee extends Guarantee {
 
-    Map<InetSocketAddress, Integer> votes = new HashMap<>();
+    Map<CandidateId, Integer> votes = new HashMap<>();
     final int majority;
 
     public ElectionSafetyGuarantee(List<Node> nodes, CountDownLatch testEndLatch, int majority) {
@@ -35,11 +34,11 @@ public class ElectionSafetyGuarantee extends Guarantee {
 
 
     @Override
-    protected void check(ChannelHandlerContext ctx, Event event) {
+    protected void check(Node source, Event event) {
         if(event instanceof RequestVoteReplyEvent && event.as(RequestVoteReplyEvent.class).voteGranted()){
             receivedExpectedEvent = true;
-            InetSocketAddress id = source(ctx).id();
-            votes.put(id, votes.getOrDefault(id, 0)+1);
+            CandidateId id = new CandidateId(source.currentTerm(), source);
+            votes.put(id, votes.getOrDefault(id, 1)+1);
         }else if(event instanceof StateTransitionEvent){
             StateTransitionEvent evt = event.as(StateTransitionEvent.class);
             if(evt.newState().isLeader()){
@@ -48,24 +47,37 @@ public class ElectionSafetyGuarantee extends Guarantee {
                 }
             }
         }else if(event instanceof AppendEntriesEvent){
-            votes.clear();
+            List<CandidateId> candidates =
+                    votes.keySet()
+                        .stream()
+                        .filter(id -> id.term == ((AppendEntriesEvent) event).msg().getTerm())
+                        .collect(Collectors.toList());
+
+            candidates.forEach(votes::remove);
         }
     }
 
     protected long leaderCount(){
-        return votes.keySet().stream().filter(this::majorityVotesGranted).count();
+        return votes.keySet().stream().filter(id -> !id.node.stopped()).filter(this::majorityVotesGranted).count();
     }
 
-    protected boolean majorityVotesGranted(InetSocketAddress id){
+    protected boolean majorityVotesGranted(CandidateId id){
+        float totalVotes = activeNodes()+1;
         float vote = votes.get(id);
-        return  vote >= majority || vote/activeNodes() >= 0.5;
+        return  vote >= majority || (totalVotes != 1 && vote/totalVotes >= 0.5);
     }
 
     private float activeNodes(){
         return nodes.stream().filter(node -> !node.stopped()).count();
     }
 
-    public int totalVotes(){
+    public int totalVotes(){ // FIXME votes should be per term
         return votes.values().stream().reduce(0, Integer::sum);
+    }
+
+    @Value
+    private static class CandidateId {
+        private final long term;
+        private final Node node;
     }
 }

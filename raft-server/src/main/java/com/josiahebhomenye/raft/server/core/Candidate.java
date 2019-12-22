@@ -33,7 +33,8 @@ public class Candidate extends NodeState {
     }
 
     private boolean receivedMajorityVotes(){
-        return node.votes >= node.config.majority || (float)(node.votes/node.activePeers.size()) >= 0.5;
+        float totalVotes = node.activePeers.size()+1;
+        return node.votes >= node.config.majority || (totalVotes != 1 &&  node.votes/totalVotes >= 0.5);
     }
 
     @Override

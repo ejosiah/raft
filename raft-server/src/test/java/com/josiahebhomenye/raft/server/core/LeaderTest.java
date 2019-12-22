@@ -2,13 +2,12 @@ package com.josiahebhomenye.raft.server.core;
 
 import com.josiahebhomenye.raft.client.Request;
 import com.josiahebhomenye.raft.client.Response;
-import com.josiahebhomenye.raft.rpc.Acknowledgement;
-import com.josiahebhomenye.raft.rpc.AppendEntries;
-import com.josiahebhomenye.raft.rpc.AppendEntriesReply;
+import com.josiahebhomenye.raft.rpc.*;
 import com.josiahebhomenye.raft.comand.Set;
 import com.josiahebhomenye.raft.log.LogEntry;
 import com.josiahebhomenye.raft.server.event.*;
 import com.josiahebhomenye.test.support.LogDomainSupport;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.*;
@@ -19,6 +18,11 @@ import static com.josiahebhomenye.raft.server.core.NodeState.*;
 public class LeaderTest extends NodeStateTest implements LogDomainSupport {
 
     Leader leader;
+
+    @Before
+    public void setup(){
+        assertTrue(node.isLeader());
+    }
 
     @Override
     public NodeState initializeState() {
@@ -175,6 +179,34 @@ public class LeaderTest extends NodeStateTest implements LogDomainSupport {
 
     @Test
     public void grant_vote_for_candidate_of_higher_terms_and_step_down(){
-        fail("Not yet implemented");
+        node.currentTerm = 1;
+        node.votedFor = node.id;
+        leader.init();
+
+        RequestVote request = new RequestVote(2, 0, 0, leaderId);
+        leader.handle(new RequestVoteEvent(request, peerChannel));
+
+        RequestVoteReply actual = peerChannel.readOutbound();
+        RequestVoteReply expected = new RequestVoteReply(1, true);
+
+        assertEquals("vote not granted", expected, actual);
+        assertTrue("did not step down for next term", node.isFollower());
+
+    }
+
+    @Test
+    public void dont_grant_vote_to_candidate_for_current_term(){
+        node.currentTerm = 1;
+        node.votedFor = node.id;
+
+        RequestVote request = new RequestVote(1, 0, 0, leaderId);
+        leader.handle(new RequestVoteEvent(request, peerChannel));
+
+        RequestVoteReply actual = peerChannel.readOutbound();
+        RequestVoteReply expected = new RequestVoteReply(1, false);
+
+        assertEquals("vote granted", expected, actual);
+        assertTrue("stepped down as leader", node.isLeader());
+
     }
 }

@@ -188,7 +188,7 @@ public class LeaderElectionTest implements StateDataSupport {
         node.addPreProcessInterceptors(new PreElectionSetup(peers));
         node.addPreProcessInterceptors(userEventCapture);
 
-        RequestVoteReply expectedMsg = new RequestVoteReply(2, true);
+        RequestVoteReply expectedMsg = new RequestVoteReply(1, true);
 
 //        node.addPostProcessInterceptors(new NodeWaitLatch(testLatch, nodeLatch, (Node, obj) -> {
 //            return expectedMsg.equals(obj);
@@ -198,7 +198,7 @@ public class LeaderElectionTest implements StateDataSupport {
 
         testLatch.await(10, TimeUnit.SECONDS);
 
-        assertEquals(2L, node.currentTerm);
+        assertEquals(1L, node.currentTerm);
         assertEquals(FOLLOWER(), node.state);
 
         mockPeer.verifyMessageReceived(expectedMsg);

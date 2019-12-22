@@ -6,6 +6,7 @@ import com.josiahebhomenye.raft.log.LogEntry;
 import com.josiahebhomenye.raft.rpc.*;
 import com.josiahebhomenye.raft.server.event.*;
 import lombok.SneakyThrows;
+import org.junit.Before;
 import org.junit.Test;
 import java.net.InetSocketAddress;
 import java.time.Duration;
@@ -18,6 +19,11 @@ import static org.junit.Assert.*;
 public class FollowerTest extends NodeStateTest{
 
     Follower follower;
+
+    @Before
+    public void setup(){
+        assertTrue(node.isFollower());
+    }
 
     @Override
     public NodeState initializeState() {
@@ -316,5 +322,46 @@ public class FollowerTest extends NodeStateTest{
         Redirect reply = nodeChannel.readOutbound();
 
         assertEquals(new Redirect(leaderId, request), reply);
+    }
+
+    @Test
+    @SneakyThrows
+    public void cancel_election_timeout_when_append_entries_msg_received(){
+        node.currentTerm = 1;
+        follower.init();
+
+        ScheduleTimeoutEvent event = userEventCapture.get(ScheduleTimeoutEvent.class).get();
+        assertElectionTimeout(event);
+        userEventCapture.clear();
+        Instant prevLastHeartbeat = node.lastHeartbeat;
+
+
+        AppendEntries appendEntries = AppendEntries.heartbeat(1, 0, 0, 0, leaderId);
+
+        // this should cancel the first timeout anc schedule a new on
+        Thread.sleep(100);
+        follower.handle(new AppendEntriesEvent(appendEntries, nodeChannel));
+        Instant curLastHeartbeat = node.lastHeartbeat;
+
+        event = userEventCapture.get(ScheduleTimeoutEvent.class).get();;
+
+        Thread.sleep(event.timeout() + 100);
+
+        ElectionTimeoutEvent timeoutEvent = userEventCapture.get(ElectionTimeoutEvent.class).get();
+
+        assertNotEquals("did not cancel first timeout",prevLastHeartbeat, timeoutEvent.lastheartbeat);
+        assertEquals("did not trigger second timeout", curLastHeartbeat, timeoutEvent.lastheartbeat);
+    }
+
+    @Test
+    public void dont_transition_to_candiate_when_lastheart_beat_is_not_set_on_timoeut(){
+        node.lastHeartbeat = Instant.now();
+        ElectionTimeoutEvent event = new ElectionTimeoutEvent(null, node.id);
+
+        follower.handle(event);
+
+        assertFalse(userEventCapture.get(StateTransitionEvent.class).isPresent());
+
+        assertTrue(node.isFollower());
     }
 }

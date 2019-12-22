@@ -2,6 +2,7 @@ package com.josiahebhomenye.raft.server.core;
 
 import com.josiahebhomenye.raft.client.Response;
 import com.josiahebhomenye.raft.rpc.AppendEntriesReply;
+import com.josiahebhomenye.raft.rpc.RequestVoteReply;
 import com.josiahebhomenye.raft.server.event.*;
 import lombok.Getter;
 import lombok.experimental.Accessors;
@@ -51,9 +52,11 @@ public abstract class NodeState {
 
     public void handle(RequestVoteEvent event){
         if(event.requestVote().getTerm() > node.currentTerm){
-            node.currentTerm = event.requestVote().getTerm();
+            node.votedFor = null;
             transitionTo(FOLLOWER());
             node.trigger(event);
+        }else{
+            event.sender().writeAndFlush(new RequestVoteReply(node.currentTerm, false));
         }
     }
 

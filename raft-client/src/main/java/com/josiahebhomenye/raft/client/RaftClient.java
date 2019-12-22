@@ -91,7 +91,7 @@ public class RaftClient<ENTRY> {
     public CompletableFuture<Response> send(ENTRY entry){
         CompletableFuture<Response> promise = new CompletableFuture<>();
 
-        if (channel != null) {
+        if (channel != null && channel.isActive()) {
             ByteBuf data = Unpooled.copiedBuffer(serializer.serialize(entry));
             channel.writeAndFlush(new PromiseRequest(promise, UUID.randomUUID().toString(), data));
         }else {
@@ -124,7 +124,6 @@ public class RaftClient<ENTRY> {
            }
        });
     }
-
 
     @SneakyThrows
     public void tryStart(){
@@ -185,22 +184,22 @@ public class RaftClient<ENTRY> {
             ctx.fireChannelRead(msg);
         }
 
-//        @Override
-//        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-//            if(stopPromise == null) {
-//                if(channel != null){
-//                    channel.close().addListener(f -> {
-//                        if(f.isSuccess()){
-//                            channel = null;
-//                            tryStart();
-//                        }
-//                    });
-//                }else{
-//                    tryStart();
-//                }
-//            }
-//            ctx.fireChannelInactive();
-//        }
+        @Override
+        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+            if(stopPromise == null) {
+                if(channel != null && channel.equals(ctx.channel())){
+                    channel.close().addListener(f -> {
+                        if(f.isSuccess()){
+                            channel = null;
+                            tryStart();
+                        }
+                    });
+                }else{
+                    tryStart();
+                }
+            }
+            ctx.fireChannelInactive();
+        }
 
 
         @Override

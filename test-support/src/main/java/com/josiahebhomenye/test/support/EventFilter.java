@@ -30,6 +30,7 @@ public class EventFilter extends ChannelDuplexHandler {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if(!blockList.contains(evt.getClass())){
             ctx.fireUserEventTriggered(evt);
