@@ -155,6 +155,7 @@ public class LeaderTest extends NodeStateTest implements LogDomainSupport {
                 assertEquals(peerClones.get(i).matchIndex + 1, peers.get(i).matchIndex);
                 assertEquals(peerClones.get(i).nextIndex + 1, peers.get(i).nextIndex);
             }
+            assertFalse(peerChannel.readOutbound() instanceof AppendEntriesReply);
         });
     }
 

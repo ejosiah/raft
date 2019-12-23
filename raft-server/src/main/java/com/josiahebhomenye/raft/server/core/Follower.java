@@ -101,6 +101,13 @@ public class Follower extends NodeState {
                 || event.requestVote().getLastLogIndex() < node.log.getLastIndex();
     }
 
+
+    @Override
+    public void handle(CommitEvent event) {
+        super.handle(event);
+        node.sender.writeAndFlush(new AppendEntriesReply(node.currentTerm,  node.log.size(), true));
+    }
+
     @Override
     public boolean isFollower() {
         return true;

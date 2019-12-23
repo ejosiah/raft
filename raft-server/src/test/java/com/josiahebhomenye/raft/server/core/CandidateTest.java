@@ -120,4 +120,9 @@ public class CandidateTest extends NodeStateTest {
         assertElectionTimeout(event);
         assertEquals(new RequestVote(2L, 0, 0, node.id), requestVoteEvent.requestVote());
     }
+
+    @Test(expected = IllegalStateException.class)
+    public void throw_illegal_state_exception_on_commit(){
+        candidate.handle(new CommitEvent());
+    }
 }

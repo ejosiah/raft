@@ -38,6 +38,11 @@ public class Candidate extends NodeState {
     }
 
     @Override
+    public void handle(CommitEvent event) {
+        throw new IllegalStateException("candidates cannot commit logs");
+    }
+
+    @Override
     public boolean isCandidate() {
         return true;
     }

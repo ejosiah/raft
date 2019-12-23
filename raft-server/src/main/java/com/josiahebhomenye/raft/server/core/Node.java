@@ -224,8 +224,7 @@ public class Node extends ChannelDuplexHandler {
     }
 
     public void handle(CommitEvent event){
-        commitIndex = event.index();
-        applyLogEntries();
+        state.handle(event);
     }
 
     public void handle(PeerDisconnectedEvent event) {
@@ -247,7 +246,6 @@ public class Node extends ChannelDuplexHandler {
             LogEntry entry = log.get(lastApplied);
             trigger(new ApplyEntryEvent(lastApplied, entry, channel));
         }
-        sender.writeAndFlush(new AppendEntriesReply(currentTerm,  log.size(), true));
     }
 
     public void handle(PeerConnectedEvent event){

@@ -60,6 +60,11 @@ public abstract class NodeState {
         }
     }
 
+    public void handle(CommitEvent event){
+        node.commitIndex = event.index();
+        node.applyLogEntries();
+    }
+
     public void handle(RequestVoteReplyEvent event){}
 
     public void handle(HeartbeatTimeoutEvent event){}
