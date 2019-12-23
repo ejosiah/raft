@@ -23,21 +23,13 @@ public class StateMachineSafetyGuarantee extends Guarantee {
         super(nodes, testEndLatch);
     }
 
-    @Override
-    protected void check(Node source, Event evt) {
-        if(evt instanceof ApplyEntryEvent){
-            receivedExpectedEvent = true;
-            ApplyEntryEvent event = evt.as(ApplyEntryEvent.class);
-            nodes.stream().filter(node -> !node.equals(source)).forEach(node -> {
-
-            });
-            for(Node node : nodes){
-                try(Log log = node.log().clone()) {
-                    LogEntry entry = log.get(event.index());
-                    if(entry != null && !entry.equals(event.entry())){
-                        fail();
-                        break;
-                    }
+    public void check(Node source, ApplyEntryEvent event) {
+        for(Node node : nodes){
+            try(Log log = node.log().clone()) {
+                LogEntry entry = log.get(event.index());
+                if(entry != null && !entry.equals(event.entry())){
+                    fail();
+                    break;
                 }
             }
         }

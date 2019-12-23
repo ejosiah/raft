@@ -6,6 +6,7 @@ import com.josiahebhomenye.raft.server.core.Node;
 import com.josiahebhomenye.raft.server.core.NodeState;
 import com.josiahebhomenye.raft.server.event.StateTransitionEvent;
 import com.josiahebhomenye.raft.server.event.StopEvent;
+import com.josiahebhomenye.raft.server.util.Dynamic;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -27,9 +28,6 @@ public abstract class Guarantee extends Interceptor {
     private boolean failed;
     protected boolean receivedExpectedEvent;
 
-    @Setter
-    protected Node leader;
-
     public void fail(){
         failed = true;
         nodes.forEach(Node::stop);
@@ -39,19 +37,9 @@ public abstract class Guarantee extends Interceptor {
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (!testComplete()) {
-            if(leader != null && evt instanceof StopEvent && ((StopEvent) evt).source.equals(leader.id())){
-                leader = null;
-            }
-
-            if(evt instanceof StateTransitionEvent){
-                StateTransitionEvent event = (StateTransitionEvent)evt;
-                if(event.newState().isLeader()){
-                    leader = event.oldState().node();
-                }
-            }
             if(evt instanceof Event){
                 synchronized (this) {
-                    check(source(ctx), (Event) evt);
+                    Dynamic.invoke(this, "check", source(ctx), evt).ifPresent(it -> receivedExpectedEvent = true);
                 }
             }
         }
@@ -65,8 +53,6 @@ public abstract class Guarantee extends Interceptor {
         return !failed;
     }
 
-    protected abstract void check(Node source, Event event);
-
     public Guarantee setup(){
         return this;
     }
@@ -77,11 +63,6 @@ public abstract class Guarantee extends Interceptor {
 
     public boolean testComplete(){
         return testEndLatch.getCount() <= 0;
-    }
-
-    protected boolean isFromLeader(ChannelHandlerContext ctx){
-        if(leader == null) return false;
-        return source(ctx).isLeader();
     }
 
     protected Node source(ChannelHandlerContext ctx){

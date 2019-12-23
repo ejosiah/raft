@@ -51,11 +51,9 @@ public class LeaderAppendOnlyGuarantee extends Guarantee implements StateDataSup
         super(nodes, latch);
     }
 
-    @Override
-    protected void check(Node Source, Event event) {
-        if(event instanceof ReceivedRequestEvent && Source.isLeader()){
-            logCopy.add(new LogEntry(Source.currentTerm(), ((ReceivedRequestEvent) event).request().getBody()));
-            receivedExpectedEvent = true;   // TODO move up to super class
+    public void check(Node Source, ReceivedRequestEvent event) {
+        if(Source.isLeader()){
+            logCopy.add(new LogEntry(Source.currentTerm(),  event.request().getBody()));
             LongStream.range(0, logCopy.size()).forEach(i -> {
                 long atIndex = i + 1;
                 try(Log leaderLog = Source.log().clone()) {

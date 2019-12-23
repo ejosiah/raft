@@ -21,7 +21,7 @@ public class ElectionSafetyGuaranteeTest extends GuaranteeTest {
 
     @Override
     protected Guarantee guarantee(List<Node> nodes, CountDownLatch latch) {
-        guarantee = new ElectionSafetyGuarantee(nodes, latch, 3);
+        guarantee = new ElectionSafetyGuarantee(nodes, latch);
         return guarantee;
     }
 

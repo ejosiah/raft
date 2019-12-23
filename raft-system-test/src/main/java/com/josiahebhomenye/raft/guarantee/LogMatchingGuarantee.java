@@ -22,21 +22,16 @@ public class LogMatchingGuarantee extends Guarantee {
         super(nodes, testEndLatch);
     }
 
-    @Override
-    protected void check(Node source, Event evt) {
-        if(evt instanceof ApplyEntryEvent){
-            receivedExpectedEvent = true;
-            ApplyEntryEvent event = evt.as(ApplyEntryEvent.class);
-            long index = event.index();
-            try(Log log = source.log().clone()){
-                for(Node node : nodes){
-                    try(Log otherLog = node.log().clone()){
-                        if(log.get(index).equals(otherLog.get(index))){
-                            for(long i = index-1; i > 0; i--){
-                                if(!log.get(i).equals(otherLog.get(i))){
-                                    fail();
-                                    break;
-                                }
+    public void check(Node source, ApplyEntryEvent event) {
+        long index = event.index();
+        try(Log log = source.log().clone()){
+            for(Node node : nodes){
+                try(Log otherLog = node.log().clone()){
+                    if(log.get(index).equals(otherLog.get(index))){
+                        for(long i = index-1; i > 0; i--){
+                            if(!log.get(i).equals(otherLog.get(i))){
+                                fail();
+                                break;
                             }
                         }
                     }

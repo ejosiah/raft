@@ -36,7 +36,6 @@ public class SystemTest implements CheckedExceptionWrapper, StateDataSupport {
 
     EntryGenerator entryGenerator;
     CountDownLatch testLatch;
-    Semaphore guard;
     ServerConfig config;
     List<Node> nodes = new ArrayList<>();
     List<Guarantee> guarantees = new ArrayList<>();
@@ -49,9 +48,8 @@ public class SystemTest implements CheckedExceptionWrapper, StateDataSupport {
 
         config = new ServerConfig(ConfigFactory.load());
         testLatch = new CountDownLatch(1);
-        guard = new Semaphore(1);
 
-        guarantees.add(new ElectionSafetyGuarantee(nodes, testLatch, config.majority).setup());
+        guarantees.add(new ElectionSafetyGuarantee(nodes, testLatch).setup());
         guarantees.add(new LeaderAppendOnlyGuarantee(nodes, testLatch).setup());
         guarantees.add(new LogMatchingGuarantee(nodes, testLatch).setup());
         guarantees.add(new LeaderCompletenessGuarantee(nodes, testLatch).setup());
@@ -125,9 +123,6 @@ public class SystemTest implements CheckedExceptionWrapper, StateDataSupport {
             nodes.forEach(node -> {
                 node.channel().eventLoop().execute(() -> {
                     guarantees.forEach(guarantee -> {
-                        if(node.state().equals(NodeState.LEADER())){
-                            guarantee.leader(node);
-                        }
                         node.channel().pipeline().addLast(guarantee);
                         node.channel().pipeline().addLast(nodeKiller);
                     });

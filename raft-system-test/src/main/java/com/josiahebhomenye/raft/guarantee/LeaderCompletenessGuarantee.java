@@ -30,29 +30,25 @@ public class LeaderCompletenessGuarantee extends Guarantee {
         super(nodes, testEndLatch);
     }
 
-    @Override
-    protected void check(Node source, Event event) {
-        if(event instanceof StateTransitionEvent){
-            receivedExpectedEvent = true;
-            if(event.as(StateTransitionEvent.class).newState().isLeader()){
-                if (prevLeader != null) {
-                    try(Log prevLeaderLog = prevLeader.log().clone()) {
-                        Node newLeader = event.as(StateTransitionEvent.class).oldState().node();
-                        try(Log newLeaderLog = newLeader.log().clone() ) {
-                            long committed = prevLeader.commitIndex();
-                            for(long i = 1; i <= committed; i++){
-                                if(!prevLeaderLog.get(i).equals(newLeaderLog.get(i))){
-                                    logger.info("guarantee failed previous {} log entry {} not present in current leader {} entry {}",
-                                            prevLeader, prevLeaderLog.get(i), newLeader, newLeaderLog.get(i));
-                                    fail();
-                                    break;
-                                }
+    public void check(Node source, StateTransitionEvent event) {
+        if(event.newState().isLeader()){
+            if (prevLeader != null) {
+                try(Log prevLeaderLog = prevLeader.log().clone()) {
+                    Node newLeader = event.oldState().node();
+                    try(Log newLeaderLog = newLeader.log().clone() ) {
+                        long committed = prevLeader.commitIndex();
+                        for(long i = 1; i <= committed; i++){
+                            if(!prevLeaderLog.get(i).equals(newLeaderLog.get(i))){
+                                logger.info("guarantee failed previous {} log entry {} not present in current leader {} entry {}",
+                                        prevLeader, prevLeaderLog.get(i), newLeader, newLeaderLog.get(i));
+                                fail();
+                                break;
                             }
                         }
                     }
                 }
-                prevLeader = event.as(StateTransitionEvent.class).oldState().node();
             }
+            prevLeader = event.oldState().node();
         }
     }
 }

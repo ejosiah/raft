@@ -24,25 +24,18 @@ import java.util.stream.Collectors;
 @ChannelHandler.Sharable
 public class ElectionSafetyGuarantee extends Guarantee {
 
-    private final int majority;
-
-    public ElectionSafetyGuarantee(List<Node> nodes, CountDownLatch testEndLatch, int majority) {
+    public ElectionSafetyGuarantee(List<Node> nodes, CountDownLatch testEndLatch) {
         super(nodes, testEndLatch);
-        this.majority = majority;
     }
 
 
-    @Override
-    protected void check(Node source, Event event) {
-        if(event instanceof StateTransitionEvent){
-            receivedExpectedEvent = true;
-            StateTransitionEvent evt = event.as(StateTransitionEvent.class);
-            if(evt.newState().isLeader()){
-                if(leaderCount(source.currentTerm()) > 1){
-                    log.info("multiple leaders encounters");
-                    nodes.forEach(n -> log.info("{}", n));
-                    fail();
-                }
+    public void check(Node source, StateTransitionEvent event) {
+        StateTransitionEvent evt = event.as(StateTransitionEvent.class);
+        if(evt.newState().isLeader()){
+            if(leaderCount(source.currentTerm()) > 1){
+                log.info("multiple leaders encounters");
+                nodes.forEach(n -> log.info("{}", n));
+                fail();
             }
         }
     }
