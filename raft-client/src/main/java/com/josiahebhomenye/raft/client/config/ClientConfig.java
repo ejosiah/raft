@@ -30,23 +30,23 @@ public class ClientConfig {
     @SneakyThrows
     @SuppressWarnings("unchecked")
     public ClientConfig(Config config){
-        this.poolingEnabled = config.getBoolean("raft.connection.pooling");
-        this.requestTimeout = config.getDuration("raft.connection.request.timeout").toMillis();
+        this.poolingEnabled = config.getBoolean("raft.client.connection.pooling");
+        this.requestTimeout = config.getDuration("raft.client.connection.request.timeout").toMillis();
         if(poolingEnabled){
-            this.maxConnections = config.getInt("raft.connection.max");
-            this.acquireTimeout = config.getDuration("raft.connection.acquire.timeout").toMillis();
-            this.maxPendingAcquires = config.getInt("raft.connection.acquire.max");
+            this.maxConnections = config.getInt("raft.client.connection.max");
+            this.acquireTimeout = config.getDuration("raft.client.connection.acquire.timeout").toMillis();
+            this.maxPendingAcquires = config.getInt("raft.client.connection.acquire.max");
         }else{
             this.maxConnections = 1;
             this.acquireTimeout  = 300L;
             this.maxPendingAcquires = 1;
         }
-        servers = config.getStringList("raft.servers")
+        servers = config.getStringList("raft.client.servers")
                     .stream()
                     .map(it -> it.split(":"))
                     .map(it -> new InetSocketAddress(it[0], Integer.parseInt(it[1]))).collect(Collectors.toList());
-        this.nThreads = config.getInt("raft.connection.nThreads");
-        this.entrySerializerClass  = (Class<? extends EntrySerializer<?>>) Class.forName(config.getString("raft.serializer"));
+        this.nThreads = config.getInt("raft.client.connection.nThreads");
+        this.entrySerializerClass  = (Class<? extends EntrySerializer<?>>) Class.forName(config.getString("raft.client.serializer"));
     }
 
     public <T> Optional<T> toOptional(Supplier<T> supplier){

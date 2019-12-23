@@ -12,15 +12,21 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.With;
+import lombok.experimental.Accessors;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
+@With
 @Getter
+@Accessors(fluent = true)
 @RequiredArgsConstructor
-public class Peer {
+@AllArgsConstructor
+public class Peer implements Cloneable  {
     long nextIndex;
     long matchIndex;
     Channel channel;
@@ -69,7 +75,7 @@ public class Peer {
 
     public void handle(CancelHeartbeatTimeoutEvent event){
         try {
-            channel.pipeline().remove("IdleStateHandler");
+            channel.pipeline().remove(IdleStateHandler.class);
         }catch (Exception ex){
             // no IdleStateHandler defined
         }
@@ -83,7 +89,8 @@ public class Peer {
 
     public void handle(StopEvent event){
         stopping = true;
-        handle(new CancelHeartbeatTimeoutEvent(id));
+        handle(new CancelHeartbeatTimeoutEvent(channel));
+        channel.close();
     }
 
     @ChannelHandler.Sharable
@@ -120,13 +127,25 @@ public class Peer {
 
         @Override
         public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-            super.disconnect(ctx, promise); // TODO fire Channel Disconnected event and try to restart peer
+            if(!stopping) {
+                node.trigger(new PeerDisconnectedEvent(Peer.this));
+            }
+            super.disconnect(ctx, promise);
         }
     }
 
     public Peer set(Channel channel){
         this.channel = channel;
         return this;
+    }
+
+    @Override
+    protected Peer clone() {
+        return new Peer(id, node, group)
+                        .withMatchIndex(matchIndex)
+                        .withNextIndex(nextIndex)
+                        .withChannel(channel)
+                        .withStopping(stopping);
     }
 
     @Override

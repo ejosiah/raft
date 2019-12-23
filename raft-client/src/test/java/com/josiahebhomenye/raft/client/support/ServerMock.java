@@ -25,6 +25,7 @@ public class ServerMock {
     private EventLoopGroup group = new NioEventLoopGroup(1);
     public List<Object> receivedMessages = new ArrayList<>();
 
+    @ChannelHandler.Sharable
     private class MessageHandler extends ChannelDuplexHandler{
         BiConsumer<ChannelHandlerContext, Request> onRequest = (ctx, obj) -> {};
 
@@ -39,6 +40,11 @@ public class ServerMock {
             if(msg instanceof Request) {
                 onRequest.accept(ctx, (Request) msg);
             }
+        }
+
+        @Override
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            super.userEventTriggered(ctx, evt);
         }
     }
 

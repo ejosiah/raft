@@ -5,27 +5,23 @@ import com.josiahebhomenye.raft.log.Log;
 import com.josiahebhomenye.raft.log.LogEntry;
 import com.josiahebhomenye.raft.server.config.ServerConfig;
 import com.josiahebhomenye.raft.server.event.CommitEvent;
-import com.josiahebhomenye.raft.server.event.StateTransitionEvent;
 import com.josiahebhomenye.raft.server.support.ForceLeader;
 import com.josiahebhomenye.raft.server.support.LeaderStart;
 import com.josiahebhomenye.raft.server.support.TestEnd;
 import com.josiahebhomenye.raft.server.util.CheckedExceptionWrapper;
 import com.josiahebhomenye.test.support.StateDataSupport;
 import com.typesafe.config.ConfigFactory;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
 import lombok.SneakyThrows;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-import java.io.DataOutputStream;
-import java.io.FileOutputStream;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 public class LogReplicationTest implements StateDataSupport, CheckedExceptionWrapper {
 
@@ -161,7 +157,7 @@ public class LogReplicationTest implements StateDataSupport, CheckedExceptionWra
     @After
     public void tearDown(){
         nodes.forEach(node -> {
-           wrap(() -> node.stop().get());
+           uncheck(() -> node.stop().get());
            delete(node.config.logPath);
            delete(node.config.statePath);
         });
@@ -185,7 +181,7 @@ public class LogReplicationTest implements StateDataSupport, CheckedExceptionWra
         follower2.start();
         follower3.start();
 
-       testEndLatch.await();
+       testEndLatch.await(2, TimeUnit.MINUTES);
        Thread.sleep(2000);  // wait a little bit for logs to flush to disk
 
         assertEquals("follower0's log not in sync with leader's", leader.log, follower0.log);

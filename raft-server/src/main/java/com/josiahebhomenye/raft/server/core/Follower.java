@@ -1,16 +1,19 @@
 package com.josiahebhomenye.raft.server.core;
 
+import com.josiahebhomenye.raft.client.Response;
 import com.josiahebhomenye.raft.rpc.AppendEntriesReply;
 import com.josiahebhomenye.raft.rpc.Redirect;
 import com.josiahebhomenye.raft.rpc.RequestVoteReply;
 import com.josiahebhomenye.raft.log.LogEntry;
 import com.josiahebhomenye.raft.server.event.*;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+@Slf4j
 public class Follower extends NodeState {
 
     protected Follower(){}
@@ -19,22 +22,21 @@ public class Follower extends NodeState {
         super.init();
         node.votes = 0;
         node.votedFor = null;
-        node.trigger(new ScheduleTimeoutEvent(node.id, node.nextTimeout()));
+        node.trigger(new ScheduleTimeoutEvent(node.channel, node.nextTimeout()));
     }
 
     public void handle(AppendEntriesEvent event){
         node.lastHeartbeat = Instant.now();
-        node.cancelElectionTimeOut();
-        node.trigger(new ScheduleTimeoutEvent(node.id, node.nextTimeout()));
+        node.trigger(new ScheduleTimeoutEvent(node.channel, node.nextTimeout()));
         if(event.msg().getTerm() < node.currentTerm){
-            event.sender().writeAndFlush(new AppendEntriesReply(node.currentTerm, false));
+            event.sender().writeAndFlush(new AppendEntriesReply(node.currentTerm, 0, false));
             return;
         }
 
         if(!node.log.isEmpty()) {
             LogEntry prevEntry = node.log.get(event.msg().getPrevLogIndex());
             if (prevEntry == null || prevEntry.getTerm() != event.msg().getPrevLogTerm()) {
-                event.sender().writeAndFlush(new AppendEntriesReply(node.currentTerm, false));
+                event.sender().writeAndFlush(new AppendEntriesReply(node.currentTerm, 0, false));
                 return;
             }
         }
@@ -51,25 +53,33 @@ public class Follower extends NodeState {
             }
             IntStream.range(0, entries.size()).forEach(i -> node.log.add(entries.get(i), nexEntryIndex + i));
         }
-        node.currentTerm = event.msg().getTerm();
 
+        node.currentTerm = event.msg().getTerm();
         node.leaderId = event.msg().getLeaderId();
+
         long nextCommitIndex = Math.min(event.msg().getLeaderCommit(), node.log.getLastIndex());
-        event.sender().writeAndFlush(new AppendEntriesReply(node.currentTerm, true));
         if(nextCommitIndex > node.commitIndex) {
-            node.trigger(new CommitEvent(nextCommitIndex, node.id));
+            node.trigger(new CommitEvent(nextCommitIndex, node.channel));
+        }else{
+            AppendEntriesReply reply = new AppendEntriesReply(node.currentTerm, node.log.size(), true);
+            log.info("node peer {}, event peer {}, reply {}", node.sender(), event.sender(), reply);
+            node.sender().writeAndFlush(reply);
         }
     }
 
     @Override
     public void handle(ReceivedRequestEvent event) {
-        event.sender().writeAndFlush(new Redirect(node.leaderId, event.request()));
+        if(node.leaderId != null) {
+            event.sender().writeAndFlush(new Redirect(node.leaderId, event.request()));
+        }else {
+            super.handle(event);
+        }
     }
 
     @Override
     public void handle(ElectionTimeoutEvent event) {
         if(node.receivedHeartbeatSinceLast(event.lastheartbeat)){
-            node.trigger(new ScheduleTimeoutEvent(node.id, node.nextTimeout()));
+            node.trigger(new ScheduleTimeoutEvent(node.channel, node.nextTimeout()));
         }else{
             transitionTo(CANDIDATE());
         }
@@ -80,6 +90,7 @@ public class Follower extends NodeState {
         if(node.alreadyVoted() || node.currentTerm > event.requestVote().getTerm() || logEntryIsNotUpToDate(event)){
             event.sender().writeAndFlush(new RequestVoteReply(node.currentTerm, false));
         }else{
+            node.votedFor = event.requestVote.getCandidateId();
             event.sender().writeAndFlush(new RequestVoteReply(node.currentTerm, true));
         }
     }
@@ -88,5 +99,15 @@ public class Follower extends NodeState {
         LogEntry lastEntry = node.log.lastEntry();
         return (lastEntry != null && event.requestVote().getLastLogTerm() < lastEntry.getTerm())
                 || event.requestVote().getLastLogIndex() < node.log.getLastIndex();
+    }
+
+    @Override
+    public boolean isFollower() {
+        return true;
+    }
+
+    @Override
+    public Id id() {
+        return Id.FOLLOWER;
     }
 }

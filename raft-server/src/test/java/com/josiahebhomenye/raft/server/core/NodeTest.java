@@ -18,10 +18,12 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
+import java.time.Instant;
 import java.util.Collections;
 
 import static org.junit.Assert.*;
 
+// TODO change to integration test
 public class NodeTest implements StateDataSupport, LogDomainSupport {
 
     Node node;
@@ -128,11 +130,28 @@ public class NodeTest implements StateDataSupport, LogDomainSupport {
         peer.set(channel);
         node.stop().get();
 
-        channel.pipeline().fireUserEventTriggered(new AppendEntriesReplyEvent(new AppendEntriesReply(0, true), peer));
-        channel.pipeline().fireUserEventTriggered(new AppendEntriesReplyEvent(new AppendEntriesReply(0, true), peer));
-        channel.pipeline().fireUserEventTriggered(new AppendEntriesReplyEvent(new AppendEntriesReply(0, true), peer));
+        channel.pipeline().fireUserEventTriggered(new AppendEntriesReplyEvent(new AppendEntriesReply(0, 0, true), peer));
+        channel.pipeline().fireUserEventTriggered(new AppendEntriesReplyEvent(new AppendEntriesReply(0, 0, true), peer));
+        channel.pipeline().fireUserEventTriggered(new AppendEntriesReplyEvent(new AppendEntriesReply(0, 0, true), peer));
 
         assertEquals(0, captureDownstream.captured());
+    }
+
+    @Test
+    public void election_timeout_should_contain_previous_last_heart_beat() throws Exception{
+        Instant prevLastHeartbeat = Instant.now();
+        node.lastHeartbeat = prevLastHeartbeat;
+        node.handle(new ScheduleTimeoutEvent(node.channel, 1000));
+        Thread.sleep(200);
+        node.lastHeartbeat = Instant.now();
+        Thread.sleep(1000);
+
+        ElectionTimeoutEvent event = userEventCapture.get(ElectionTimeoutEvent.class).get();
+
+        Instant expected = prevLastHeartbeat;
+        Instant actual = event.lastheartbeat;
+
+        assertEquals(expected, actual);
     }
 
 }

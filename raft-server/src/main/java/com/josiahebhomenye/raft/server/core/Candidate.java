@@ -11,10 +11,10 @@ public class Candidate extends NodeState {
         node.currentTerm++;
         node.votedFor = node.id;
         node.votes = 1;
-        node.trigger(new ScheduleTimeoutEvent(node.id, node.nextTimeout()));
+        node.trigger(new ScheduleTimeoutEvent(node.channel, node.nextTimeout()));
         long lastIndex = node.log.isEmpty() ? 0 : node.log.getLastIndex();
         long lastTerm = node.log.isEmpty() ? 0 : node.log.lastEntry().getTerm();
-        node.trigger(new SendRequestVoteEvent(new RequestVote(node.currentTerm, lastIndex, lastTerm, node.id)));
+        node.trigger(new SendRequestVoteEvent(new RequestVote(node.currentTerm, lastIndex, lastTerm, node.id), node.channel));
     }
 
     @Override
@@ -33,6 +33,17 @@ public class Candidate extends NodeState {
     }
 
     private boolean receivedMajorityVotes(){
-        return node.votes >= node.config.majority || (float)(node.votes/node.activePeers.size()) >= 0.5;
+        float totalVotes = node.activePeers.size()+1;
+        return node.votes >= node.config.majority || (totalVotes != 1 &&  node.votes/totalVotes > 0.5);
+    }
+
+    @Override
+    public boolean isCandidate() {
+        return true;
+    }
+
+    @Override
+    public Id id() {
+        return Id.CANDIDATE;
     }
 }

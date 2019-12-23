@@ -1,10 +1,12 @@
 package com.josiahebhomenye.raft.server.handlers;
 
 import com.josiahebhomenye.raft.server.core.Node;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import lombok.RequiredArgsConstructor;
 
+@ChannelHandler.Sharable
 @RequiredArgsConstructor
 public class ServerChannelInitializer extends ProtocolInitializer<NioServerSocketChannel> {
 
@@ -18,9 +20,10 @@ public class ServerChannelInitializer extends ProtocolInitializer<NioServerSocke
 
         node.preProcessInterceptors().forEach(pipeline::addFirst);
         pipeline
-            .addLast(node)
-            .addLast(node.stateManager())
-            .addLast(new ServerLogger(node));
+            .addLast(Node.HANDLER_KEY, node)
+            .addLast("state-manager", node.stateManager())
+            .addLast(node.backgroundGroup(), "state-persistor", node.statePersistor())
+            .addLast("logger", new ServerLogger(node));
         node.postProcessInterceptors().forEach(pipeline::addLast);
     }
 }

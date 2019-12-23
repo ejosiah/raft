@@ -14,5 +14,7 @@ dependencies {
     compile project(":raft-protocol")
     compile project(":raft-server")
     compile project(":raft-client")
-    testCompile group: 'junit', name: 'junit', version: '4.12'
+
+    compile project(":test-support")
+    compile group: 'junit', name: 'junit', version: '4.12'
 }

@@ -39,7 +39,7 @@ public abstract class RaftScenarios implements StateDataSupport, CheckedExceptio
     TestEnd testEnd;
     List<Node> nodes = new ArrayList<>();
     Data data = new Data(0);
-    List<NodeState> nodeStates = nodeStates();
+    List<NodeStateData> nodeStates = nodeStates();
     InetSocketAddress leaderId;
     AtomicBoolean running = new AtomicBoolean(false);
     EmbeddedChannel channel;
@@ -54,7 +54,7 @@ public abstract class RaftScenarios implements StateDataSupport, CheckedExceptio
 
         data = new Data(0);
 
-        NodeState leaderState = nodeStates.stream().filter(ns -> ns.leader()).findFirst().get();
+        NodeStateData leaderState = nodeStates.stream().filter(ns -> ns.leader()).findFirst().get();
         leaderId = leaderState.id();
         List<LogEntry> entries = new ArrayList<>(leaderState.logEntries());
         entries.addAll(newEntries());
@@ -74,7 +74,7 @@ public abstract class RaftScenarios implements StateDataSupport, CheckedExceptio
 
     void buildStateData(){
         IntStream.range(0, nodeStates.size()).forEach(i -> {
-            NodeState nodeState = nodeStates.get(i);
+            NodeStateData nodeState = nodeStates.get(i);
             writeState(nodeState.currentTerm(), nodeState.id(), String.format("state%s.dat", i));
         });
     }
@@ -93,7 +93,7 @@ public abstract class RaftScenarios implements StateDataSupport, CheckedExceptio
 
     void constructNodes(){
         IntStream.range(0, nodeStates.size()).forEach(i -> {
-            NodeState nodeState = nodeStates.get(i);
+            NodeStateData nodeState = nodeStates.get(i);
             ServerConfig config = new ServerConfig(ConfigFactory.load());
             String statePath = String.format("state%s.dat", i);
             String logPath = String.format("log%s.dat", i);
@@ -119,7 +119,7 @@ public abstract class RaftScenarios implements StateDataSupport, CheckedExceptio
     @After
     public void tearDown(){
         nodes.forEach(node -> {
-            wrap(() ->node.stop().get());
+            uncheck(() ->node.stop().get());
             delete(node.config().logPath);
             delete(node.config().statePath);
         });
@@ -154,7 +154,7 @@ public abstract class RaftScenarios implements StateDataSupport, CheckedExceptio
         return Collections.emptyList();
     }
 
-    protected abstract List<NodeState> nodeStates();
+    protected abstract List<NodeStateData> nodeStates();
 
     @RequiredArgsConstructor
     class NewEntriesSupplier extends Thread{

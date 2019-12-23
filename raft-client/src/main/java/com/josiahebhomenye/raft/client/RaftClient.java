@@ -18,20 +18,20 @@ import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.pool.ChannelPoolHandler;
 import io.netty.channel.pool.FixedChannelPool;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import lombok.Getter;
 import lombok.SneakyThrows;
+import lombok.experimental.Accessors;
+import org.omg.SendingContext.RunTime;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import java.nio.channels.ClosedChannelException;
+import java.util.*;
+import java.util.concurrent.*;
 
+@Accessors(fluent = true)
 @ChannelHandler.Sharable
-public class RaftClient<ENTRY> extends ChannelDuplexHandler {
+public class RaftClient<ENTRY> {
 
     private final ClientConfig config;
     private final Map<InetSocketAddress, Bootstrap> bootstrapMap;
@@ -39,13 +39,17 @@ public class RaftClient<ENTRY> extends ChannelDuplexHandler {
     private final EntrySerializer<ENTRY> serializer;
 
     private ChannelPool pool;
+
+    @Getter
     private Channel channel;
+
     private Iterator<Bootstrap> bootstrapItr;
     private final RequestEncoder requestEncoder;
     private final ResponseMatcher responseMatcher;
     private final PromiseToRequestEncoder promiseToRequestEncoder;
     private final ClientLogger clientLogger;
     private final CountDownLatch startLatch;
+    private CompletableFuture<Void> stopPromise;
 
     @SneakyThrows
     @SuppressWarnings("unchecked")
@@ -58,6 +62,7 @@ public class RaftClient<ENTRY> extends ChannelDuplexHandler {
         promiseToRequestEncoder = new PromiseToRequestEncoder();
         clientLogger = new ClientLogger();
         this.startLatch = new CountDownLatch(1);
+        this.stopPromise = null;
 
         this.bootstrapMap = new HashMap<>();
         config.servers.forEach(address -> {
@@ -86,34 +91,18 @@ public class RaftClient<ENTRY> extends ChannelDuplexHandler {
     public CompletableFuture<Response> send(ENTRY entry){
         CompletableFuture<Response> promise = new CompletableFuture<>();
 
-//        Future<Channel> fc = pool.acquire();
-//
-//        fc.addListener(f -> {
-//            if(f.isSuccess()){
-//                ByteBuf data = Unpooled.copiedBuffer(serializer.serialize(entry));
-//                fc.get().write(new PromiseRequest(promise, UUID.randomUUID().toString(), data));
-//            }else{
-//                promise.completeExceptionally(f.cause());
-//            }
-//        });
-        ByteBuf data = Unpooled.copiedBuffer(serializer.serialize(entry));
-        channel.writeAndFlush(new PromiseRequest(promise, UUID.randomUUID().toString(), data));
+        if (channel != null && channel.isActive()) {
+            ByteBuf data = Unpooled.copiedBuffer(serializer.serialize(entry));
+            channel.writeAndFlush(new PromiseRequest(promise, UUID.randomUUID().toString(), data));
+        }else {
+            promise.completeExceptionally(new ClosedChannelException());
+        }
 
         return promise;
     }
 
-    @Override
-    public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) throws Exception {
-        promise.addListener(f -> {
-            if(f.isSuccess()){
-                channel = ctx.channel();
-            }
-        });
-    }
-
-    @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        super.write(ctx, msg, promise);
+    public CompletableFuture<Response> send(List<ENTRY> entry){
+        return null;
     }
 
     public void handle(Redirect redirect){
@@ -123,48 +112,43 @@ public class RaftClient<ENTRY> extends ChannelDuplexHandler {
 
        cf.addListener(f -> {
            if(f.isSuccess()){
-               channel.close();
+               Channel oldChannel = channel;
+               if(oldChannel != null) {
+                   oldChannel.close();
+               }
                channel = cf.channel();
                channel.writeAndFlush(redirect.getRequest());
+           }else{
+               String id = redirect.getRequest().getId();
+                channel.pipeline().fireUserEventTriggered(new RejectRequestEvent(id, new ClosedChannelException()));
            }
        });
     }
 
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        cause.printStackTrace();
-        super.exceptionCaught(ctx, cause);
-    }
-
     @SneakyThrows
     public void tryStart(){
-        if (!bootstrapItr.hasNext()) {
-            bootstrapItr = bootstrapMap.values().iterator();
-        }
-        if(config.poolingEnabled) {
-            if (pool != null) {
-                pool.close();
+        if (!group.isShutdown() && !group.isShutdown()) {
+            if (!bootstrapItr.hasNext()) {
+                bootstrapItr = bootstrapMap.values().iterator();
             }
-            start(bootstrapItr.next());
-        }else{
-           Bootstrap bootstrap = bootstrapItr.next();
-           ChannelFuture cf = bootstrap.connect();
+            Bootstrap bootstrap = bootstrapItr.next();
+            ChannelFuture cf = bootstrap.connect();
 
-           cf.addListener(f -> {
-               if(f.isSuccess()){
-                   channel = cf.channel();
-                   startLatch.countDown();
-               }else{
-                   tryStart();
-               }
-           });
+            cf.addListener(f -> {
+                if(f.isSuccess()){
+                    channel = cf.channel();
+                    startLatch.countDown();
+                }else{
+                    tryStart();
+                }
+            });
         }
     }
 
     @SneakyThrows
     public void start(){
         tryStart();
-        startLatch.await(30, TimeUnit.SECONDS);
+        startLatch.await(30, TimeUnit.SECONDS); // Change to future
     }
 
     public void start(Bootstrap bootstrap){
@@ -172,26 +156,60 @@ public class RaftClient<ENTRY> extends ChannelDuplexHandler {
     }
 
     @SneakyThrows
-    public void stop(){
-        group.shutdownGracefully().sync();
+    public CompletableFuture<Void> stop(){
+        if(stopPromise == null) {
+            stopPromise = new CompletableFuture<>();
+            if(channel != null) {
+                group.shutdownGracefully().addListener(f -> {
+                    if (f.isSuccess()) {
+                        stopPromise.complete(null);
+                    } else {
+                        stopPromise.completeExceptionally(f.cause());
+                    }
+                });
+            }else {
+                stopPromise.complete(null);
+            }
+        }
+        return stopPromise;
     }
 
-    @Sharable
+    @ChannelHandler.Sharable
     private class Handler extends ChannelDuplexHandler {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             if(msg instanceof Redirect){
                 handle((Redirect)msg);
-            }else {
-                ctx.fireChannelRead(msg);
             }
+            ctx.fireChannelRead(msg);
+        }
+
+        @Override
+        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+            if(stopPromise == null) {
+                if(channel != null && channel.equals(ctx.channel())){
+                    channel.close().addListener(f -> {
+                        if(f.isSuccess()){
+                            channel = null;
+                            tryStart();
+                        }
+                    });
+                }else{
+                    tryStart();
+                }
+            }
+            ctx.fireChannelInactive();
+        }
+
+
+        @Override
+        public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+            super.channelUnregistered(ctx);
         }
     }
 
     private static final ChannelPoolHandler NO_OP_POOL_HANDLER = new AbstractChannelPoolHandler() {
         @Override
-        public void channelCreated(Channel ch) throws Exception {
-
-        }
+        public void channelCreated(Channel ch) { }
     };
 }

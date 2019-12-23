@@ -5,7 +5,7 @@ import com.josiahebhomenye.raft.rpc.AppendEntriesReply;
 public class AppendEntriesReplyEncoderTest extends JsonEncoderTest<AppendEntriesReply> {
     @Override
     protected AppendEntriesReply createObjectToEncode() {
-        return new AppendEntriesReply(1, true);
+        return new AppendEntriesReply(1, 0, true);
     }
 
     @Override

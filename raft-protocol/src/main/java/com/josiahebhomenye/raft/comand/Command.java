@@ -47,6 +47,12 @@ public abstract class Command {
         }
     }
 
+    @SneakyThrows
+    public static int type(byte[] data){
+        DataInput in = new DataInputStream(new ByteArrayInputStream(data));
+       return in.readInt();
+    }
+
     public String name(){
         return this.getClass().getSimpleName();
     }

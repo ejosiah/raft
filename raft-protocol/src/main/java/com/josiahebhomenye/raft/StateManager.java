@@ -38,7 +38,7 @@ public abstract class StateManager<ENTRY, STATE> extends ChannelDuplexHandler{
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
         if(evt instanceof ApplyEntryEvent){
             STATE state = handle((ApplyEntryEvent)evt);
-            ctx.pipeline().fireUserEventTriggered(new StateUpdatedEvent(state, ctx.channel().localAddress()));
+            ctx.pipeline().fireUserEventTriggered(new StateUpdatedEvent(state, ctx.channel()));
         }
         ctx.fireUserEventTriggered(evt);
     }

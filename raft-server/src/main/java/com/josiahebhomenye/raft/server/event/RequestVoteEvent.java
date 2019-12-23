@@ -1,5 +1,6 @@
 package com.josiahebhomenye.raft.server.event;
 
+import com.josiahebhomenye.raft.event.InboundEvent;
 import com.josiahebhomenye.raft.rpc.RequestVote;
 import com.josiahebhomenye.raft.event.Event;
 import io.netty.channel.Channel;
@@ -12,13 +13,13 @@ import lombok.experimental.Accessors;
 @NoArgsConstructor
 @Accessors(fluent = true)
 @EqualsAndHashCode(callSuper=false)
-public class RequestVoteEvent extends Event {
+public class RequestVoteEvent extends Event implements InboundEvent {
 
     public RequestVote requestVote;
     private Channel sender;
 
     public RequestVoteEvent(RequestVote requestVote, Channel sender) {
-        super(requestVote.getCandidateId());
+        super(sender);
         this.requestVote = requestVote;
         this.sender = sender;
     }

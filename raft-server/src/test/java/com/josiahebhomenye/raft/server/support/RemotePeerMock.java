@@ -55,12 +55,9 @@ public class RemotePeerMock {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             RemotePeerMock.this.receivedMessages.add(msg);
-            if(onAppendEntries != null || onRequestVote != null || onRequestVoteReply != null) {
-                RemotePeerMock.logger.info("remote peer {} handling message {} from node {}", address, msg, ctx.channel().remoteAddress());
-                if (msg instanceof AppendEntries) onAppendEntries.accept(ctx, (AppendEntries) msg);
-                else if (msg instanceof RequestVote) onRequestVote.accept(ctx, (RequestVote) msg);
-                else if (msg instanceof RequestVoteReply) onRequestVoteReply.accept(ctx, (RequestVoteReply) msg);
-            }
+            if (msg instanceof AppendEntries) onAppendEntries.accept(ctx, (AppendEntries) msg);
+            else if (msg instanceof RequestVote) onRequestVote.accept(ctx, (RequestVote) msg);
+            else if (msg instanceof RequestVoteReply) onRequestVoteReply.accept(ctx, (RequestVoteReply) msg);
         }
 
         @Override
@@ -70,15 +67,24 @@ public class RemotePeerMock {
     }
 
     public void whenAppendEntriesThen(BiConsumer<ChannelHandlerContext, AppendEntries> action){
-        handler.onAppendEntries = action;
+        handler.onAppendEntries = (ctx, entries) -> {
+            logger.info("remote peer {} handling message {} from node {}", address, entries, ctx.channel().remoteAddress());
+            action.accept(ctx, entries);
+        };
     }
 
     public void whenRequestVote(BiConsumer<ChannelHandlerContext, RequestVote> action){
-        handler.onRequestVote = action;
+        handler.onRequestVote = (ctx, vote) -> {
+            logger.info("remote peer {} handling message {} from node {}", address, vote, ctx.channel().remoteAddress());
+            action.accept(ctx, vote);
+        };
     }
 
     public void whenRequestVoteReply(BiConsumer<ChannelHandlerContext, RequestVoteReply> action){
-        handler.onRequestVoteReply = action;
+        handler.onRequestVoteReply =  (ctx, reply) -> {
+            logger.info("remote peer {} handling message {} from node {}", address, reply, ctx.channel().remoteAddress());
+            action.accept(ctx, reply);
+        };
     }
 
     public void verifyMessageReceived(Object msg){
@@ -86,8 +92,9 @@ public class RemotePeerMock {
     }
 
     public void reset(){
-        handler.onAppendEntries = null;
-        handler.onRequestVote = null;
+        handler.onAppendEntries = (ctx, obj) -> {};
+        handler.onRequestVote = (ctx, obj) -> {};
+        handler.onRequestVoteReply = (ctx, obj) -> {};
     }
 
     @SneakyThrows

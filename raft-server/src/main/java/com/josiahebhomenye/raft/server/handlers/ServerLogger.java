@@ -1,18 +1,26 @@
 package com.josiahebhomenye.raft.server.handlers;
 
+import com.josiahebhomenye.raft.comand.Command;
+import com.josiahebhomenye.raft.log.LogEntry;
 import com.josiahebhomenye.raft.server.core.Node;
+import com.josiahebhomenye.raft.server.event.AppendEntriesEvent;
 import com.josiahebhomenye.raft.server.event.PeerConnectedEvent;
+import com.josiahebhomenye.raft.server.event.PeerDisconnectedEvent;
 import com.josiahebhomenye.raft.server.event.StateTransitionEvent;
 import io.netty.channel.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.SocketAddress;
 
+@ChannelHandler.Sharable
 @RequiredArgsConstructor
-@Slf4j
 public class ServerLogger extends ChannelDuplexHandler {
-    
+
+    private static final Logger log = LoggerFactory.getLogger("NodeServer");
+
     private final Node node;
 
     @Override
@@ -50,6 +58,19 @@ public class ServerLogger extends ChannelDuplexHandler {
         }else if(evt instanceof PeerConnectedEvent){
             PeerConnectedEvent event = (PeerConnectedEvent)evt;
             log.info("{} connected to peer {}", node, event.getSource());
+        }else if(evt instanceof PeerDisconnectedEvent){
+            PeerDisconnectedEvent event = (PeerDisconnectedEvent)evt;
+            log.info("peer {} disconnect from server {}", event.getSource(), node.id());
+        }else if(evt instanceof AppendEntriesEvent){
+            AppendEntriesEvent event = (AppendEntriesEvent)evt;
+            event.msg().getEntries().forEach(entry -> {
+                LogEntry logEntry = LogEntry.deserialize(entry);
+                if(Command.type(logEntry.getCommand()) != 0){
+                    log.debug("appending log entry {} from {}", logEntry, event.source);
+                }else{
+                    log.warn("received ill formatted log entry {} from {}", logEntry, event.source);
+                }
+            });
         }
         ctx.fireUserEventTriggered(evt);
     }

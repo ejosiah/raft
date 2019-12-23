@@ -6,7 +6,7 @@ public class AppendEntriesReplyDecoderTest extends JsonDecoderTest<AppendEntries
 
     @Override
     protected AppendEntriesReply createObjectToDecode() {
-        return new AppendEntriesReply(1, true);
+        return new AppendEntriesReply(1, 0, true);
     }
 
     @Override

@@ -16,7 +16,7 @@ public class PreElectionSetup extends Interceptor {
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        if(evt.equals(new StateTransitionEvent(NULL_STATE(), FOLLOWER(), node.id()))){
+        if(evt.equals(new StateTransitionEvent(NULL_STATE(), FOLLOWER(), node.channel()))){
             peers.forEach(RemotePeerMock::startClient);
         }
         ctx.fireUserEventTriggered(evt);

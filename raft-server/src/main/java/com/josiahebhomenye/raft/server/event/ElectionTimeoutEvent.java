@@ -1,6 +1,7 @@
 package com.josiahebhomenye.raft.server.event;
 
 import com.josiahebhomenye.raft.event.Event;
+import io.netty.channel.Channel;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -16,7 +17,7 @@ import java.time.Instant;
 public class ElectionTimeoutEvent extends Event {
     public Instant lastheartbeat;
 
-    public ElectionTimeoutEvent(Instant lastheartbeat, InetSocketAddress source){
+    public ElectionTimeoutEvent(Instant lastheartbeat, Channel source){
         super(source);
         this.lastheartbeat = lastheartbeat;
     }

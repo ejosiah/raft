@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Optional;
@@ -27,7 +28,12 @@ public class Dynamic {
             return  method.map(m -> invoke(m, target, args));
         }catch (Exception ex){
             log.warn("exception [{}] encountered trying to invoke {}.{}({}}", ex.getCause(), target, methodName, Arrays.toString(args));
-            throw ex;
+            Throwable cause = ex.getCause();
+            if(cause != null){
+                throw cause;
+            }else{
+                throw ex;
+            }
         }
     }
 
@@ -64,5 +70,13 @@ public class Dynamic {
     public static <T> T invoke(Method method, Object target, Object...args){
         Object res =  method.invoke(target, args);
         return res != null ? (T)res : (T)Void.instance;
+    }
+
+    @SneakyThrows
+    @SuppressWarnings("unchecked")
+    public static <T> T getField(String fieldName, Object target){
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return (T)field.get(target);
     }
 }

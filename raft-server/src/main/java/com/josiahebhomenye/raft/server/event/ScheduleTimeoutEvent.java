@@ -1,6 +1,7 @@
 package com.josiahebhomenye.raft.server.event;
 
 import com.josiahebhomenye.raft.event.Event;
+import io.netty.channel.Channel;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -17,11 +18,11 @@ public class ScheduleTimeoutEvent extends Event {
     private long timeout;
     private TimeUnit unit;
 
-    public ScheduleTimeoutEvent(SocketAddress source, long timeout){
+    public ScheduleTimeoutEvent(Channel source, long timeout){
         this(source, timeout, TimeUnit.MILLISECONDS);
     }
 
-    public ScheduleTimeoutEvent(SocketAddress source, long timeout, TimeUnit unit){
+    public ScheduleTimeoutEvent(Channel source, long timeout, TimeUnit unit){
         super(source);
         this.timeout = timeout;
         this.unit = unit;

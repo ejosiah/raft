@@ -20,7 +20,7 @@ public class AppendEntriesReplyEvent extends Event {
     private Peer sender;
 
     public AppendEntriesReplyEvent(AppendEntriesReply msg, Peer sender){
-        super(sender.getId());
+        super(sender.channel());
         this.msg = msg;
         this.sender = sender;
     }

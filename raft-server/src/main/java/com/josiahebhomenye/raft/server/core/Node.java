@@ -1,8 +1,11 @@
 package com.josiahebhomenye.raft.server.core;
 
 
+import com.josiahebhomenye.raft.client.Request;
 import com.josiahebhomenye.raft.event.Event;
+import com.josiahebhomenye.raft.event.InboundEvent;
 import com.josiahebhomenye.raft.rpc.AppendEntries;
+import com.josiahebhomenye.raft.rpc.AppendEntriesReply;
 import com.josiahebhomenye.raft.rpc.RequestVote;
 import com.josiahebhomenye.raft.StateManager;
 import com.josiahebhomenye.raft.event.ApplyEntryEvent;
@@ -22,8 +25,7 @@ import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 
-import java.io.DataInputStream;
-import java.io.FileInputStream;
+import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Instant;
@@ -32,12 +34,17 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import static com.josiahebhomenye.raft.server.core.NodeState.CANDIDATE;
 import static com.josiahebhomenye.raft.server.core.NodeState.FOLLOWER;
 import static com.josiahebhomenye.raft.server.core.NodeState.NULL_STATE;
 
 @Getter
 @Accessors(fluent = true)
+@ChannelHandler.Sharable
 public class Node extends ChannelDuplexHandler {
+
+    public static final String HANDLER_KEY = "NODE";
+
     long currentTerm;
     long commitIndex;
     long lastApplied;
@@ -49,22 +56,30 @@ public class Node extends ChannelDuplexHandler {
     NodeState state;
     EventLoopGroup group;
     EventLoopGroup clientGroup;
+    EventLoopGroup backgroundGroup;
     ServerConfig config;
     Instant lastHeartbeat;
     InetSocketAddress id;
+
     InetSocketAddress leaderId;
     int votes;
     ScheduledFuture<?> scheduledElectionTimeout;
     StateManager<?, ?> stateManager;
+    StatePersistor statePersistor;
 
     List<ChannelDuplexHandler> preProcessInterceptors = new ArrayList<>();
     List<ChannelDuplexHandler> postProcessInterceptors = new ArrayList<>();
 
-    private CompletableFuture<Void> stopPromise;
-    private boolean stopping;
+    CompletableFuture<Void> stopPromise;
+    boolean stopping;
+    Channel sender;
 
     @SneakyThrows
     public Node(ServerConfig config){
+        initialize(config);
+    }
+
+    void initialize(ServerConfig config){
         this.state = NULL_STATE();
         this.state.set(this);
         this.config = config;
@@ -72,8 +87,13 @@ public class Node extends ChannelDuplexHandler {
         this.activePeers = new HashMap<>();
         this.peers = new ArrayList<>();
         this.votes = 0;
-        this.group = new NioEventLoopGroup();
-        this.clientGroup = new NioEventLoopGroup(3);
+        this.group = new NioEventLoopGroup(1);   // TODO read from config
+        this.clientGroup = new NioEventLoopGroup(3); // TODO read from config
+        this.backgroundGroup = new DefaultEventLoopGroup(1); // TODO read from config
+        this.statePersistor = new StatePersistor();
+        this.stopPromise = null;
+        this.stopping = false;
+        this.lastHeartbeat = Instant.EPOCH;
         initStateManager();
         initStateData();
     }
@@ -107,7 +127,7 @@ public class Node extends ChannelDuplexHandler {
             .handler(new ServerChannelInitializer(this))
             .childHandler(new ServerClientChannelInitializer(this))
             .localAddress(id)
-        .bind().sync();
+        .bind().sync(); // TODO change to future
     }
 
     public boolean alreadyVoted(){
@@ -122,7 +142,7 @@ public class Node extends ChannelDuplexHandler {
     public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) throws Exception {
         promise.addListener(f -> {
             if(f.isSuccess()){
-                channel = ctx.channel();
+                ctx.pipeline().fireUserEventTriggered(new BindEvent(ctx.channel()));
                 peers = config.peers.stream().map(id -> new Peer(id, this, clientGroup)).collect(Collectors.toList());
                 peers.forEach(Peer::connect);
                 state.transitionTo(FOLLOWER());
@@ -135,7 +155,7 @@ public class Node extends ChannelDuplexHandler {
     public CompletableFuture<Void> stop(){
         if(stopPromise == null) {
             stopPromise = new CompletableFuture<>();
-            trigger(new StopEvent(id));
+            trigger(new StopEvent(channel));
         }
         return stopPromise;
     }
@@ -143,12 +163,20 @@ public class Node extends ChannelDuplexHandler {
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if(!stopping) {
+            if(evt instanceof InboundEvent){
+                sender = ((InboundEvent)evt).sender();
+            }
             Dynamic.invoke(this, "handle", evt);
             ctx.fireUserEventTriggered(evt);
         }
     }
 
+    public void handle(BindEvent event){
+        channel = event.channel();
+    }
+
     public void handle(StateTransitionEvent event){
+        event.newState().set(this);
         state.init();
     }
 
@@ -169,14 +197,13 @@ public class Node extends ChannelDuplexHandler {
     }
 
     public void handle(ScheduleTimeoutEvent event){
-        if(cancelElectionTimeOut()) {
-            scheduledElectionTimeout = group.schedule(() -> trigger(new ElectionTimeoutEvent(lastHeartbeat, id))
-                    , event.timeout(), TimeUnit.MILLISECONDS);
-        }
+        cancelElectionTimeOut();
+        Instant prevLastHeartbeat = this.lastHeartbeat;
+        scheduledElectionTimeout = group.schedule(() -> trigger(new ElectionTimeoutEvent(prevLastHeartbeat, channel))
+                , event.timeout(), event.unit());
     }
 
     public void handle(ElectionTimeoutEvent event){
-        scheduledElectionTimeout = null;
         state.handle(event);
     }
 
@@ -215,18 +242,18 @@ public class Node extends ChannelDuplexHandler {
     }
 
     public void applyLogEntries(){
-        while(commitIndex > lastApplied){
+        while(commitIndex > lastApplied){   // TODO apply the log entries in node.handle(ApplyEntryEvent)
             lastApplied++;
             LogEntry entry = log.get(lastApplied);
-            trigger(new ApplyEntryEvent(entry, id));
+            trigger(new ApplyEntryEvent(lastApplied, entry, channel));
         }
+        sender.writeAndFlush(new AppendEntriesReply(currentTerm,  log.size(), true));
     }
 
     public void handle(PeerConnectedEvent event){
         Peer peer = event.peer();
         peer.nextIndex = log.getLastIndex() + 1;
-        peer.matchIndex = 0;
-        activePeers.put(event.peer().id, event.peer());
+        activePeers.put(event.peer().id, peer);
         state.handle(event);
     }
 
@@ -234,7 +261,13 @@ public class Node extends ChannelDuplexHandler {
         stopping = true;
         cancelElectionTimeOut();
         broadcast(event);
+        activePeers.clear();
         log.close();
+        shutdown();
+
+    }
+
+    private void shutdown(){
         clientGroup.shutdownGracefully().addListener(f -> {
             if (f.isSuccess()) {
                 group.shutdownGracefully().addListener(ff -> {
@@ -248,7 +281,6 @@ public class Node extends ChannelDuplexHandler {
                 stopPromise.completeExceptionally(f.cause());
             }
         });
-
     }
 
     public void broadcast(Event event){
@@ -265,9 +297,11 @@ public class Node extends ChannelDuplexHandler {
         return config.electionTimeout.get();
     }
 
-    public boolean cancelElectionTimeOut(){
-        return scheduledElectionTimeout == null || (!scheduledElectionTimeout.isCancelled()
-                && scheduledElectionTimeout.isCancellable() && scheduledElectionTimeout.cancel(true));
+    public void cancelElectionTimeOut(){
+        if(scheduledElectionTimeout != null){
+            scheduledElectionTimeout.cancel(true);
+            scheduledElectionTimeout = null;
+        }
     }
 
     public long prevLogIndex(){
@@ -283,17 +317,31 @@ public class Node extends ChannelDuplexHandler {
     }
 
     public void addPreProcessInterceptors(ChannelDuplexHandler... interceptors){
-        Arrays.stream(interceptors).filter(i -> i instanceof Interceptor).map(i -> (Interceptor)i).forEach(i -> i.node(this));
-        preProcessInterceptors.addAll(Arrays.asList(interceptors));
+        addPreProcessInterceptors(Arrays.asList(interceptors));
+    }
+
+    public void addPreProcessInterceptors(List<? extends ChannelDuplexHandler> interceptors){
+        interceptors.stream().filter(i -> i instanceof Interceptor).map(i -> (Interceptor)i).forEach(i -> i.node(this));
+        preProcessInterceptors.addAll(interceptors);
     }
 
     public void addPostProcessInterceptors(ChannelDuplexHandler... interceptors){
-        Arrays.stream(interceptors).filter(i -> i instanceof Interceptor).map(i -> (Interceptor)i).forEach(i -> i.node(this));
-        postProcessInterceptors.addAll(Arrays.asList(interceptors));
+        addPostProcessInterceptors(Arrays.asList(interceptors));
+    }
+
+    public void addPostProcessInterceptors(List<? extends ChannelDuplexHandler> interceptors){
+        interceptors.stream().filter(i -> i instanceof Interceptor).map(i -> (Interceptor)i).forEach(i -> i.node(this));
+        postProcessInterceptors.addAll(interceptors);
     }
 
     public boolean receivedHeartbeatSinceLast(Instant heartbeat){
-        return lastHeartbeat != null && heartbeat != null && heartbeat.isBefore(lastHeartbeat);
+        Instant prevLastHeartbeat = ensureValue(heartbeat);
+        Instant curLastHeartbeat = ensureValue(lastHeartbeat);
+        return prevLastHeartbeat.isBefore(curLastHeartbeat);
+    }
+
+    private Instant ensureValue(Instant instant){
+        return instant == null ? Instant.EPOCH : instant;
     }
 
     public void add(byte[] entry) {
@@ -334,24 +382,112 @@ public class Node extends ChannelDuplexHandler {
         return log.entriesFrom(index).stream().map(LogEntry::serialize).collect(Collectors.toList());
     }
 
+    public boolean stopping(){
+        return stopPromise != null && !stopPromise.isDone();
+    }
+
+    public boolean stopped() {
+        return stopPromise != null && stopPromise.isDone();
+    }
+
+    public void restart() {
+        initialize(config);
+        start();
+    }
+
+    @Override
+    public String toString() {
+        return String.format("Node{id: %s, state: %s, term: %s commitIndex: %s, offline: %b]"
+                , id, state, currentTerm, commitIndex, stopped() );
+    }
+
+    public boolean isFollower(){
+        return state.isFollower();
+    }
+
+    public boolean isCandidate(){
+        return state.isCandidate();
+    }
+
+    public boolean isLeader() {
+        return state.isLeader();
+    }
+
+    @Sharable
     public class ChildHandler extends ChannelDuplexHandler{
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
             if(Node.this.stopped()) return;
             if(msg instanceof AppendEntries){
                 trigger(new AppendEntriesEvent((AppendEntries)msg, ctx.channel()));
             }else if(msg instanceof RequestVote){
                 trigger(new RequestVoteEvent((RequestVote)msg, ctx.channel()));
+            }else if(msg instanceof Request){
+                trigger(new ReceivedRequestEvent((Request)msg, ctx.channel()));
+            }
+            else {
+                ctx.fireUserEventTriggered(new UnhandledMessageEvent(msg, ctx.channel()));
             }
         }
     }
 
-    private boolean stopped() {
-        return stopPromise != null && stopPromise.isDone();
+    @Sharable
+    private class StatePersistor extends ChannelInboundHandlerAdapter{
+
+        private InetSocketAddress prevVotedFor;
+        private long prevTerm;
+
+        public class StatePersistException extends RuntimeException{
+            public StatePersistException(Throwable cause){
+                super("unable to persist node state", cause);
+            }
+        }
+
+        @Override
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+            if(shouldPersist(evt)){
+                prevTerm = currentTerm;
+                prevVotedFor = votedFor;
+                try(DataOutputStream out = new DataOutputStream(new FileOutputStream(config.statePath))){
+                    out.writeLong(currentTerm);
+                    if(votedFor != null) {
+                        out.writeUTF(votedFor.getHostName());
+                        out.writeInt(votedFor.getPort());
+                    }
+                }catch (Exception ex){
+                    channel.pipeline().fireExceptionCaught(new StatePersistException(ex));
+                }
+            }
+            ctx.fireUserEventTriggered(evt);
+        }
+
+        private boolean shouldPersist(Object evt){
+            if(currentTerm == 0 || votedFor == null) return false;
+            if(prevTerm == currentTerm && votedFor.equals(prevVotedFor)) return false;
+            if(evt instanceof StateTransitionEvent){
+                StateTransitionEvent event = (StateTransitionEvent)evt;
+                if(event.newState().equals(CANDIDATE())) return true;
+            }
+            if(evt instanceof AppendEntriesEvent) return true;
+            if(evt instanceof RequestVoteEvent) return true;
+            return false;
+        }
     }
 
     @Override
-    public String toString() {
-        return String.format("Node{id: %s, state: %s]", id, state);
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Node node = (Node) o;
+        return currentTerm == node.currentTerm &&
+                (votedFor != null &&votedFor.equals(node.votedFor)) &&
+                log.equals(node.log) &&
+                id.equals(node.id);
     }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(currentTerm, votedFor, log, id);
+    }
+
 }

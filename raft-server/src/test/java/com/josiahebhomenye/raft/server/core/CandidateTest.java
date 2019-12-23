@@ -46,9 +46,8 @@ public class CandidateTest extends NodeStateTest {
 
     @Test
     public void become_leader_if_received_majority_votes(){
+        candidate.init();
         RequestVoteReply reply = new RequestVoteReply(1, true);
-        candidate.handle(new RequestVoteReplyEvent(reply, peerChannel));
-        assertEquals(CANDIDATE(), node.state);
 
         candidate.handle(new RequestVoteReplyEvent(reply, peerChannel));
         assertEquals(CANDIDATE(), node.state);
@@ -56,8 +55,8 @@ public class CandidateTest extends NodeStateTest {
         candidate.handle(new RequestVoteReplyEvent(reply, peerChannel));
         assertEquals(LEADER(), node.state);
 
-        StateTransitionEvent event = userEventCapture.get(0);
-        assertEquals(new StateTransitionEvent(CANDIDATE(), LEADER(), node.id), event);
+        StateTransitionEvent event = userEventCapture.get(StateTransitionEvent.class).get();
+        assertEquals(new StateTransitionEvent(CANDIDATE(), LEADER(), node.channel), event);
     }
 
     @Test
@@ -65,13 +64,16 @@ public class CandidateTest extends NodeStateTest {
         node.activePeers.clear();
         node.handle(new PeerConnectedEvent(peers.getFirst()));
 
+        candidate.init();
+        userEventCapture.clear();
+
         RequestVoteReply reply = new RequestVoteReply(1, true);
         candidate.handle(new RequestVoteReplyEvent(reply, peerChannel));
 
         assertEquals(LEADER(), node.state);
 
         StateTransitionEvent event = userEventCapture.get(0);
-        assertEquals(new StateTransitionEvent(CANDIDATE(), LEADER(), node.id), event);
+        assertEquals(new StateTransitionEvent(CANDIDATE(), LEADER(), node.channel), event);
     }
 
     @Test
@@ -91,7 +93,7 @@ public class CandidateTest extends NodeStateTest {
         assertEquals(0, userEventCapture.captured());
         assertEquals(CANDIDATE(), node.state);
 
-        AppendEntriesReply expected = new AppendEntriesReply(2, false);
+        AppendEntriesReply expected = new AppendEntriesReply(2, 0, false);
         AppendEntriesReply actual = nodeChannel.readOutbound();
 
         assertEquals(expected, actual);
@@ -106,7 +108,7 @@ public class CandidateTest extends NodeStateTest {
         assertEquals(1, node.votes);
         userEventCapture.clear();
 
-        candidate.handle(new ElectionTimeoutEvent(Instant.now(), node.id));
+        candidate.handle(new ElectionTimeoutEvent(Instant.now(), node.channel));
 
         assertEquals(2L, node.currentTerm);
         assertEquals(node.id, node.votedFor);

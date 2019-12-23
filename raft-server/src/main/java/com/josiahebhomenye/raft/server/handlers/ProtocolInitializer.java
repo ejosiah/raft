@@ -6,8 +6,10 @@ import com.josiahebhomenye.raft.codec.client.RequestEncoder;
 import com.josiahebhomenye.raft.codec.client.ResponseDecoder;
 import com.josiahebhomenye.raft.codec.client.ResponseEncoder;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
 
+@ChannelHandler.Sharable
 public class ProtocolInitializer<C extends Channel> extends ChannelInitializer<C> {
 
     @Override
