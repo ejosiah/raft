@@ -379,12 +379,7 @@ public class Node extends ChannelDuplexHandler {
     }
     
     protected List<byte[]> logEntriesFrom(long index){
-        try {
-            return log.entriesFrom(index).stream().map(LogEntry::serialize).collect(Collectors.toList());
-        }catch (Exception ex){
-            ex.getCause();
-            return null;
-        }
+        return log.entriesFrom(index).stream().map(LogEntry::serialize).collect(Collectors.toList());
     }
 
     public boolean stopping(){
