@@ -16,7 +16,7 @@ public class UnhandledMessageEvent extends Event {
     private Object msg;
 
     public  UnhandledMessageEvent(Object msg, Channel sender){
-        super(sender.remoteAddress());
+        super(sender);
         this.msg = msg;
     }
 }

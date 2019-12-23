@@ -1,20 +1,17 @@
 package com.josiahebhomenye.raft.event;
 
-import lombok.EqualsAndHashCode;
+import io.netty.channel.Channel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
 
 @NoArgsConstructor
 @Getter
-@EqualsAndHashCode
 public abstract class Event {
-     public SocketAddress source;
+    public Channel source;
 
-    public Event(SocketAddress source){
+    public Event(Channel source){
         this.source = source;
     }
 

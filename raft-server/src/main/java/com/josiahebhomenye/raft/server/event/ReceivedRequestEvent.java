@@ -11,13 +11,13 @@ import lombok.experimental.Accessors;
 @Data
 @NoArgsConstructor
 @Accessors(fluent = true)
-@EqualsAndHashCode(callSuper=false, exclude = {"sender"})
+@EqualsAndHashCode(callSuper=false, exclude = {"peer"})
 public class ReceivedRequestEvent extends Event {
     private Channel sender;
     private Request request;
 
     public ReceivedRequestEvent(Request request, Channel sender){
-        super(sender.remoteAddress());
+        super(sender);
         this.request = request;
         this.sender = sender;
     }

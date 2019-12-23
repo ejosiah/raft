@@ -76,6 +76,7 @@ public abstract class NodeStateTest implements StateDataSupport {
         peers.forEach(p -> p.set(peerChannel));
 
         clientChannel = new EmbeddedChannel(userEventCapture);
+        node.sender = clientChannel;
     }
 
     @After
@@ -103,7 +104,7 @@ public abstract class NodeStateTest implements StateDataSupport {
         StateTransitionEvent event = userEventCapture.get(StateTransitionEvent.class).get();
         AppendEntriesEvent appendEntriesEvent = userEventCapture.get(AppendEntriesEvent.class).get();
 
-        assertEquals(new StateTransitionEvent(state, FOLLOWER(), node.id), event);
+        assertEquals(new StateTransitionEvent(state, FOLLOWER(), node.channel), event);
         assertEquals(expectedAppendEntriesEvent, appendEntriesEvent);
         assertEquals(FOLLOWER(), node.state);
     }
@@ -121,7 +122,7 @@ public abstract class NodeStateTest implements StateDataSupport {
         StateTransitionEvent event = userEventCapture.get(StateTransitionEvent.class).get();
         RequestVoteEvent actual = userEventCapture.get(RequestVoteEvent.class).get();
 
-        assertEquals(new StateTransitionEvent(state, FOLLOWER(), node.id), event);
+        assertEquals(new StateTransitionEvent(state, FOLLOWER(), node.channel), event);
         assertEquals(expected, actual);
         assertEquals(FOLLOWER(), node.state);
     }

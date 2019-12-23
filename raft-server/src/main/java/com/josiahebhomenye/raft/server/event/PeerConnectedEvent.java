@@ -15,7 +15,7 @@ public class PeerConnectedEvent extends Event {
     private Peer peer;
 
     public PeerConnectedEvent(Peer peer){
-        super(peer.getId());
+        super(peer.channel());
         this.peer = peer;
     }
 }

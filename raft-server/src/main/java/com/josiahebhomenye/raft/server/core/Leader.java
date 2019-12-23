@@ -1,8 +1,8 @@
 package com.josiahebhomenye.raft.server.core;
 
 import com.josiahebhomenye.raft.client.Response;
-import com.josiahebhomenye.raft.rpc.Acknowledgement;
 import com.josiahebhomenye.raft.rpc.AppendEntries;
+import com.josiahebhomenye.raft.rpc.AppendEntriesReply;
 import com.josiahebhomenye.raft.server.event.*;
 
 import java.util.Collection;
@@ -14,12 +14,12 @@ public class Leader extends NodeState {
     @Override
     public void init() {
         node.activePeers.values().forEach(node::heartbeat);
-        node.trigger(new ScheduleHeartbeatTimeoutEvent(node.id, node.nextHeartbeatTimeout()));
+        node.trigger(new ScheduleHeartbeatTimeoutEvent(node.channel, node.nextHeartbeatTimeout()));
     }
 
     @Override
     public void handle(PeerConnectedEvent event) {
-        event.peer().trigger(new ScheduleHeartbeatTimeoutEvent(node.id, node.nextHeartbeatTimeout()));
+        event.peer().trigger(new ScheduleHeartbeatTimeoutEvent(node.channel, node.nextHeartbeatTimeout()));
     }
 
     @Override
@@ -34,7 +34,7 @@ public class Leader extends NodeState {
     @Override
     public void handle(ReceivedRequestEvent event) {
         node.add(event.request().getBody());
-        event.sender().writeAndFlush(Response.empty(event.request().getId(), true)); // TODO Don't reply the sender reply downstream
+        event.sender().writeAndFlush(Response.empty(event.request().getId(), true)); // TODO Don't reply the peer reply downstream
         node.replicate();   // TODO don't send if previously sent pending response
     }
 
@@ -46,12 +46,14 @@ public class Leader extends NodeState {
 
     @Override
     public void handle(AppendEntriesReplyEvent event) {
-        if(event.msg().isSuccess()){
-            event.sender().matchIndex = event.sender().nextIndex; // TODO check this is right
-            event.sender().nextIndex++;
+        Peer peer = event.sender();
+        AppendEntriesReply reply = event.msg();
+        if(reply.isSuccess()){
+            long lastLogIndex = node.log.getLastIndex(); // TODO cache this
+            peer.matchIndex =  Math.max(peer.matchIndex, reply.getLastApplied());
+            peer.nextIndex =  Math.max(peer.matchIndex + 1, lastLogIndex + 1);
 
             long lastCommitIndex = node.commitIndex;
-            long lastLogIndex = node.log.getLastIndex(); // TODO cache this
 
             long nextCommitIndex = 0;
             for(long n = lastCommitIndex + 1;  n <= lastLogIndex; n++){
@@ -60,11 +62,11 @@ public class Leader extends NodeState {
                 }
             }
             if(nextCommitIndex > 0){
-                node.trigger(new CommitEvent(nextCommitIndex, node.id));
+                node.trigger(new CommitEvent(nextCommitIndex, node.channel));
             }
         }else{
-            event.sender().nextIndex--;
-            node.sendAppendEntriesTo(event.sender());
+            peer.nextIndex--;
+            node.sendAppendEntriesTo(peer);
         }
     }
 

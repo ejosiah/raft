@@ -1,6 +1,7 @@
 package com.josiahebhomenye.raft.server.event;
 
 import com.josiahebhomenye.raft.event.Event;
+import io.netty.channel.Channel;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -16,7 +17,7 @@ import java.net.InetSocketAddress;
 @EqualsAndHashCode(callSuper=false)
 public class CancelHeartbeatTimeoutEvent extends Event {
 
-    public CancelHeartbeatTimeoutEvent(InetSocketAddress source){
+    public CancelHeartbeatTimeoutEvent(Channel source){
         super(source);
     }
 }

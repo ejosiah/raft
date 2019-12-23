@@ -43,7 +43,7 @@ public class ElectionSafetyGuaranteeTest extends GuaranteeTest {
     }
 
     @Test
-    public void pass_if_previous_leader_online_and_new_leader_elected_for_higher_term() throws Exception{
+    public void pass_if_previous_leader_offline_and_new_leader_elected_for_higher_term() throws Exception{
         grantVote(nodes.getLast());
         electAsLeader(nodes.getFirst());
         revertToFollower(nodes.getLast());
@@ -54,27 +54,18 @@ public class ElectionSafetyGuaranteeTest extends GuaranteeTest {
         assertTrue(guarantee.passed());
     }
 
-    private void revertToFollower(Node candidate) {
-        if(!candidate.isFollower()){
-            candidate.trigger(new StateTransitionEvent(candidate.state(), FOLLOWER(), candidate.id()));
-        }
-    }
 
     @Test
-    public void rest_votes_when_leader_elected() throws Exception{
-
-        electAsLeader(nodes.getFirst());
+    public void pass_after_leader_of_previous_term_comes_back_online_new_leader_elected_for_higher_term() throws Exception{
         grantVote(nodes.getLast());
+        electAsLeader(nodes.getFirst());
+        revertToFollower(nodes.getLast());
 
-        declineVote(nodes.getLast(), 1);
-
-        assertEquals(5, guarantee.totalVotes());
+        nodes.getFirst().stop().get(); // TODO use reflection to set value instead
+        electAsLeader(nodes.getLast());
+        nodes.getFirst().restart();
 
         assertTrue(guarantee.passed());
-
-        startLeadDuties(nodes.getFirst());
-
-        assertEquals(0, guarantee.totalVotes());
     }
 
     @Test
@@ -85,16 +76,23 @@ public class ElectionSafetyGuaranteeTest extends GuaranteeTest {
     }
 
     @Test
-    public void fail_when_more_than_one_leader_elected_when_available_nodes_less_than_majority(){
-        nodes.stream().skip(2).forEach(node -> uncheck( () -> node.stop().get()));
+    public void fail_if_leaders_elected_after_split_votes_between_every_node(){
+        nodes.forEach(n -> electAsLeader(n, 0));
+
+        assertFalse(guarantee.passed());
+    }
+
+    @Test
+    public void fail_leaders_from_split_votes(){
         electAsLeader(nodes.getFirst(), 1);
-        electAsLeader(nodes.get(1), 1);
+        electAsLeader(nodes.getLast(), 1);
+
         assertFalse(guarantee.passed());
     }
 
     private void grantVote(Node candidate){
         if(!candidate.isCandidate()){
-            candidate.trigger(new StateTransitionEvent(candidate.state(), CANDIDATE(), candidate.id()));
+            candidate.trigger(new StateTransitionEvent(candidate.state(), CANDIDATE(), candidate.channel()));
         }
         RequestVoteReply vote = new RequestVoteReply(1, true);
         candidate.trigger(new RequestVoteReplyEvent(vote, clientChannel));
@@ -106,13 +104,13 @@ public class ElectionSafetyGuaranteeTest extends GuaranteeTest {
 
     private void electAsLeader(Node candidate, int count){
         if(!candidate.isCandidate()){
-            candidate.trigger(new StateTransitionEvent(candidate.state(), CANDIDATE(), candidate.id()));
+            candidate.trigger(new StateTransitionEvent(candidate.state(), CANDIDATE(), candidate.channel()));
         }
         IntStream.range(0, count).forEach(i -> {
             RequestVoteReply vote = new RequestVoteReply(1, true);
             candidate.trigger(new RequestVoteReplyEvent(vote, clientChannel));
         });
-        candidate.trigger(new StateTransitionEvent(FOLLOWER().set(candidate), LEADER(), candidate.id()));
+        candidate.trigger(new StateTransitionEvent(FOLLOWER().set(candidate), LEADER(), candidate.channel()));
     }
 
     private void declineVote(Node candidate){
@@ -121,7 +119,7 @@ public class ElectionSafetyGuaranteeTest extends GuaranteeTest {
 
     private void declineVote(Node candidate, int count){
         if(!candidate.isCandidate()){
-            candidate.trigger(new StateTransitionEvent(candidate.state(), CANDIDATE(), candidate.id()));
+            candidate.trigger(new StateTransitionEvent(candidate.state(), CANDIDATE(), candidate.channel()));
         }
         IntStream.range(0, count).forEach(i -> {
             RequestVoteReply vote = new RequestVoteReply(1, false);
@@ -136,6 +134,12 @@ public class ElectionSafetyGuaranteeTest extends GuaranteeTest {
         AppendEntries heartbeat = AppendEntries.heartbeat(1, 0, 0, 0, nodes.getFirst().id());
         AppendEntriesEvent event = new AppendEntriesEvent(heartbeat, clientChannel);
         leader.trigger(event);
+    }
+
+    private void revertToFollower(Node candidate) {
+        if(!candidate.isFollower()){
+            candidate.trigger(new StateTransitionEvent(candidate.state(), FOLLOWER(), candidate.channel()));
+        }
     }
 
 }

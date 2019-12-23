@@ -14,7 +14,7 @@ public class HeartbeatTimeoutEvent extends Event {
     private Peer peer;
 
     public HeartbeatTimeoutEvent(Peer peer) {
-        super(peer.getId());
+        super(peer.channel());
         this.peer = peer;
     }
 }

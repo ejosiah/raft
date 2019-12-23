@@ -12,6 +12,7 @@ import lombok.experimental.Accessors;
 @NoArgsConstructor
 public class AppendEntriesReply {
     long term;
+    long lastApplied;
     boolean success;
 }
 

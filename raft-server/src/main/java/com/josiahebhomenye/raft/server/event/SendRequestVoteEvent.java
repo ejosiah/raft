@@ -2,6 +2,7 @@ package com.josiahebhomenye.raft.server.event;
 
 import com.josiahebhomenye.raft.rpc.RequestVote;
 import com.josiahebhomenye.raft.event.Event;
+import io.netty.channel.Channel;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -14,8 +15,8 @@ import lombok.experimental.Accessors;
 public class SendRequestVoteEvent extends Event {
     private RequestVote requestVote;
 
-    public SendRequestVoteEvent(RequestVote requestVote){
-        super(requestVote.getCandidateId());
+    public SendRequestVoteEvent(RequestVote requestVote, Channel source){
+        super(source);
         this.requestVote = requestVote;
     }
 }

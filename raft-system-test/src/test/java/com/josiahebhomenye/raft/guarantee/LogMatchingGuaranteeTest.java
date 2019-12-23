@@ -44,7 +44,7 @@ public class LogMatchingGuaranteeTest extends GuaranteeTest implements LogDomain
         LogEntry logEntry = followerMissingEntries1().getLast();
         InetSocketAddress id = nodes.get(2).id();
 
-        ApplyEntryEvent event = new ApplyEntryEvent(lastApplied, logEntry, id);
+        ApplyEntryEvent event = new ApplyEntryEvent(lastApplied, logEntry, nodes.get(2).channel());
 
         nodes.get(2).trigger(event);
 
@@ -76,7 +76,7 @@ public class LogMatchingGuaranteeTest extends GuaranteeTest implements LogDomain
         long index = lastApplied - 1;
         nodes.getFirst().log().add(entry, index);
 
-        ApplyEntryEvent event = new ApplyEntryEvent(lastApplied, logEntry, id);
+        ApplyEntryEvent event = new ApplyEntryEvent(lastApplied, logEntry, nodes.get(2).channel());
 
         nodes.get(2).trigger(event);
 

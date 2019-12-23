@@ -15,7 +15,7 @@ public class PeerChannelInitializer extends ProtocolInitializer<Channel> {
     protected void initChannel(Channel ch) throws Exception {
         super.initChannel(ch);
         ch.pipeline()
-          .addLast(peer.getConnectionHandler())
-          .addLast(peer.getLogger());
+          .addLast(peer.connectionHandler())
+          .addLast(peer.logger());
     }
 }

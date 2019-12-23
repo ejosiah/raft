@@ -3,7 +3,9 @@ package com.josiahebhomenye.raft.server.core;
 
 import com.josiahebhomenye.raft.client.Request;
 import com.josiahebhomenye.raft.event.Event;
+import com.josiahebhomenye.raft.event.InboundEvent;
 import com.josiahebhomenye.raft.rpc.AppendEntries;
+import com.josiahebhomenye.raft.rpc.AppendEntriesReply;
 import com.josiahebhomenye.raft.rpc.RequestVote;
 import com.josiahebhomenye.raft.StateManager;
 import com.josiahebhomenye.raft.event.ApplyEntryEvent;
@@ -68,8 +70,9 @@ public class Node extends ChannelDuplexHandler {
     List<ChannelDuplexHandler> preProcessInterceptors = new ArrayList<>();
     List<ChannelDuplexHandler> postProcessInterceptors = new ArrayList<>();
 
-    private CompletableFuture<Void> stopPromise;
-    private boolean stopping;
+    CompletableFuture<Void> stopPromise;
+    boolean stopping;
+    Channel sender;
 
     @SneakyThrows
     public Node(ServerConfig config){
@@ -152,7 +155,7 @@ public class Node extends ChannelDuplexHandler {
     public CompletableFuture<Void> stop(){
         if(stopPromise == null) {
             stopPromise = new CompletableFuture<>();
-            trigger(new StopEvent(id));
+            trigger(new StopEvent(channel));
         }
         return stopPromise;
     }
@@ -160,6 +163,9 @@ public class Node extends ChannelDuplexHandler {
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if(!stopping) {
+            if(evt instanceof InboundEvent){
+                sender = ((InboundEvent)evt).sender();
+            }
             Dynamic.invoke(this, "handle", evt);
             ctx.fireUserEventTriggered(evt);
         }
@@ -193,7 +199,7 @@ public class Node extends ChannelDuplexHandler {
     public void handle(ScheduleTimeoutEvent event){
         cancelElectionTimeOut();
         Instant prevLastHeartbeat = this.lastHeartbeat;
-        scheduledElectionTimeout = group.schedule(() -> trigger(new ElectionTimeoutEvent(prevLastHeartbeat, id))
+        scheduledElectionTimeout = group.schedule(() -> trigger(new ElectionTimeoutEvent(prevLastHeartbeat, channel))
                 , event.timeout(), event.unit());
     }
 
@@ -239,8 +245,9 @@ public class Node extends ChannelDuplexHandler {
         while(commitIndex > lastApplied){   // TODO apply the log entries in node.handle(ApplyEntryEvent)
             lastApplied++;
             LogEntry entry = log.get(lastApplied);
-            trigger(new ApplyEntryEvent(lastApplied, entry, id));
+            trigger(new ApplyEntryEvent(lastApplied, entry, channel));
         }
+        sender.writeAndFlush(new AppendEntriesReply(currentTerm,  log.size(), true));
     }
 
     public void handle(PeerConnectedEvent event){
@@ -373,6 +380,10 @@ public class Node extends ChannelDuplexHandler {
     
     protected List<byte[]> logEntriesFrom(long index){
         return log.entriesFrom(index).stream().map(LogEntry::serialize).collect(Collectors.toList());
+    }
+
+    public boolean stopping(){
+        return stopPromise != null && !stopPromise.isDone();
     }
 
     public boolean stopped() {

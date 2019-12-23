@@ -16,7 +16,7 @@ public class BindEvent extends Event {
     private Channel channel;
 
     public BindEvent(Channel channel){
-        super(channel.localAddress());
+        super(channel);
         this.channel = channel;
     }
 }

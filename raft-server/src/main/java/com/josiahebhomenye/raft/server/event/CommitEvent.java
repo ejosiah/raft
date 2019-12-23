@@ -1,6 +1,7 @@
 package com.josiahebhomenye.raft.server.event;
 
 import com.josiahebhomenye.raft.event.Event;
+import io.netty.channel.Channel;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
@@ -19,7 +20,7 @@ public class CommitEvent extends Event {
 
     }
 
-    public CommitEvent(long index, InetSocketAddress source){
+    public CommitEvent(long index, Channel source){
         super(source);
         this.index = index;
     }

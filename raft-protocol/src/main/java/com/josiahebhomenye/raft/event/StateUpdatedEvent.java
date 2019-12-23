@@ -1,5 +1,6 @@
 package com.josiahebhomenye.raft.event;
 
+import io.netty.channel.Channel;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -13,7 +14,7 @@ import java.net.SocketAddress;
 public class StateUpdatedEvent extends Event {
     private Object state;
 
-    public StateUpdatedEvent(Object state, SocketAddress source){
+    public StateUpdatedEvent(Object state, Channel source){
         super(source);
         this.state = state;
     }

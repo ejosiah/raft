@@ -26,7 +26,7 @@ public abstract class NodeState {
     public void transitionTo(NodeState newState){
         if(newState != this) {
             newState.set(node); // FIXME remove this, Node handler of state transition will take care of this
-            node.trigger(new StateTransitionEvent(this, newState, node.id));
+            node.trigger(new StateTransitionEvent(this, newState, node.channel));
         }
     }
 
@@ -41,7 +41,7 @@ public abstract class NodeState {
             transitionTo(FOLLOWER());
             node.trigger(event);
         }else{
-            event.sender().writeAndFlush(new AppendEntriesReply(node.currentTerm, false));
+            event.sender().writeAndFlush(new AppendEntriesReply(node.currentTerm, 0, false));
         }
     }
 

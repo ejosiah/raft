@@ -17,7 +17,7 @@ public class RequestVoteReplyEvent extends Event {
     private Channel sender;
 
     public RequestVoteReplyEvent(RequestVoteReply reply, Channel sender){
-        super(sender.remoteAddress());
+        super(sender);
         this.reply = reply;
         this.sender = sender;
     }

@@ -11,6 +11,7 @@
     <logger name="com.josiahebhomenye.raft.server" level="INFO"/>
     <logger name="Node" level="INFO"/>
     <logger name="com.josiahebhomenye.raft.server.util.Dynamic" level="DEBUG" />
+    <logger name="com.josiahebhomenye.raft.server.core.Follower" level="DEBUG" />
 
     <root level="INFO">
         <appender-ref ref="STDOUT" />

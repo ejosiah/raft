@@ -54,7 +54,7 @@ public class SystemTest implements CheckedExceptionWrapper, StateDataSupport {
         guarantees.add(new ElectionSafetyGuarantee(nodes, testLatch, config.majority).setup());
         guarantees.add(new LeaderAppendOnlyGuarantee(nodes, testLatch).setup());
         guarantees.add(new LogMatchingGuarantee(nodes, testLatch).setup());
-        guarantees.add(new LeaderCompletenessGuarantee(nodes, testLatch).setup());
+    //    guarantees.add(new LeaderCompletenessGuarantee(nodes, testLatch).setup());
         guarantees.add(new StateMachineSafetyGuarantee(nodes, testLatch).setup());
 
         IntStream.range(0, 5).forEach(i -> {

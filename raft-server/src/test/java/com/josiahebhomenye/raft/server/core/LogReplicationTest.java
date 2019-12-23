@@ -21,6 +21,7 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 public class LogReplicationTest implements StateDataSupport, CheckedExceptionWrapper {
 
@@ -180,7 +181,7 @@ public class LogReplicationTest implements StateDataSupport, CheckedExceptionWra
         follower2.start();
         follower3.start();
 
-       testEndLatch.await();
+       testEndLatch.await(2, TimeUnit.MINUTES);
        Thread.sleep(2000);  // wait a little bit for logs to flush to disk
 
         assertEquals("follower0's log not in sync with leader's", leader.log, follower0.log);
