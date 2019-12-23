@@ -46,6 +46,22 @@ public class LeaderTest extends NodeStateTest implements LogDomainSupport {
         assertEquals(config.heartbeatTimeout.get(), event.timeout());
     }
 
+    @Test
+    public void increment_next_index_for_all_available_peers_on_initialization(){
+        LinkedList<LogEntry> leaderEntries = leaderEntries();
+        node.currentTerm = leaderEntries.getLast().getTerm();
+
+        peers.forEach(peer -> node.handle(new PeerConnectedEvent(peer)));
+
+        peers.forEach(peer -> assertEquals(1, peer.nextIndex));
+
+        leaderEntries.forEach(node.log::add);
+
+        leader.init();
+
+        peers.forEach(peer -> assertEquals(leaderEntries.size() + 1, peer.nextIndex));
+    }
+
 
     @Test
     public void acknowledge_client_command_request_and_replicate_to_followers() {

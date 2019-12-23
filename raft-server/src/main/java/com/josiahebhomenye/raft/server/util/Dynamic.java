@@ -28,7 +28,12 @@ public class Dynamic {
             return  method.map(m -> invoke(m, target, args));
         }catch (Exception ex){
             log.warn("exception [{}] encountered trying to invoke {}.{}({}}", ex.getCause(), target, methodName, Arrays.toString(args));
-            throw ex;
+            Throwable cause = ex.getCause();
+            if(cause != null){
+                throw cause;
+            }else{
+                throw ex;
+            }
         }
     }
 

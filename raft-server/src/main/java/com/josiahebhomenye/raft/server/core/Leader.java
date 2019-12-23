@@ -13,7 +13,10 @@ public class Leader extends NodeState {
 
     @Override
     public void init() {
-        node.activePeers.values().forEach(node::heartbeat);
+        node.activePeers.values().forEach(peer -> {
+            peer.nextIndex = node.log.getLastIndex() + 1;
+            node.heartbeat(peer);
+        });
         node.trigger(new ScheduleHeartbeatTimeoutEvent(node.channel, node.nextHeartbeatTimeout()));
     }
 
