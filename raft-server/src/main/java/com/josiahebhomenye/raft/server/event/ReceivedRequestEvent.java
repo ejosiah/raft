@@ -11,7 +11,7 @@ import lombok.experimental.Accessors;
 @Data
 @NoArgsConstructor
 @Accessors(fluent = true)
-@EqualsAndHashCode(callSuper=false, exclude = {"peer"})
+@EqualsAndHashCode(callSuper=false, exclude = {"sender"})
 public class ReceivedRequestEvent extends Event {
     private Channel sender;
     private Request request;

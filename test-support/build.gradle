@@ -1,8 +1,20 @@
 plugins {
     id 'java'
+    id "aspectj.AspectjGradlePlugin" version "0.0.3"
+    id "io.freefair.lombok" version "2.7"
 }
 
 version 'unspecified'
+
+sourceSets{
+    lombok{
+        java{
+            srcDir "build/delombok/main"
+            compileClasspath = sourceSets.main.compileClasspath
+            outputDir = sourceSets.main.java.outputDir
+        }
+    }
+}
 
 sourceCompatibility = 1.8
 
@@ -26,4 +38,32 @@ dependencies {
     compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.29'
     compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.3'
     compile group: 'ch.qos.logback', name: 'logback-core', version: '1.2.3'
+}
+
+
+task Ajc{
+    dependsOn delombok
+    def sourceSet = sourceSets.lombok
+    FileCollection aspectpath = configurations.findByName("aspectpath")
+    FileCollection ajInpath = configurations.findByName("ajInpath")
+    def xlint = 'ignore'
+    def iajcArgs = [
+                    classpath           : sourceSet.compileClasspath.asPath,
+                    destDir      		  : sourceSet.java.outputDir,
+                    s                   : sourceSet.java.outputDir,
+                    source              : project.convention.plugins.java.sourceCompatibility,
+                    target              : project.convention.plugins.java.targetCompatibility,
+                    inpath       	      : sourceSet.java.outputDir,
+                    xlint               : xlint,
+                    fork                : 'false',
+                    aspectPath          : aspectpath.asPath,
+                    showWeaveInfo       : 'true']
+
+    ant.taskdef(resource: "org/aspectj/tools/ant/taskdefs/aspectjTaskdefs.properties", classpath: project.configurations.ajtools.asPath)
+    ant.iajc(iajcArgs) {
+        sourceRoots {
+            pathelement(location: sourceSet.java.srcDirs[1].absolutePath)
+        }
+    }
+  //  println("${sourceSet.java.outputDir}")
 }

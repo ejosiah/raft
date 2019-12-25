@@ -34,6 +34,7 @@ public interface StateDataSupport {
         }
     }
 
+    @SneakyThrows
     default void writeState(long term, InetSocketAddress votedFor, String path){
         try(DataOutputStream out = new DataOutputStream(new FileOutputStream(path))){
             out.writeLong(term);
@@ -42,7 +43,7 @@ public interface StateDataSupport {
                 out.writeUTF(votedFor.getHostName());
                 out.writeInt(votedFor.getPort());
             }
-        }catch(Exception ex){
+        }catch(NoSuchFileException ex){
 
         }
     }
