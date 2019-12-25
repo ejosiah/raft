@@ -1,26 +1,24 @@
 plugins {
     id 'java'
-    id "aspectj.AspectjGradlePlugin" version "0.0.3"
+    id 'application'
     id "io.freefair.lombok" version "2.7"
 }
 
 version 'unspecified'
 
-sourceSets{
-    lombok{
-        java{
-            srcDir "build/delombok/main"
-            compileClasspath = sourceSets.main.compileClasspath
-            outputDir = sourceSets.main.java.outputDir
-        }
-    }
-}
 
 sourceCompatibility = 1.8
+
+mainClassName = 'com.josiahebhomenye.test.support.Main'
 
 repositories {
     mavenCentral()
 }
+
+configurations.create('ajtools')
+configurations.create('aspectpath')
+configurations.create('ajInpath')
+
 
 dependencies {
 
@@ -38,22 +36,30 @@ dependencies {
     compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.29'
     compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.3'
     compile group: 'ch.qos.logback', name: 'logback-core', version: '1.2.3'
+
+    ajtools "org.aspectj:aspectjtools:${aspectjVersion}"
+    compile "org.aspectj:aspectjrt:${aspectjVersion}"
 }
 
 
-task Ajc{
-    dependsOn delombok
-    def sourceSet = sourceSets.lombok
+task Ajc(dependsOn: delombok){
+
+    def sourceSet = sourceSets.main
+    def srcDir = "${buildDir.absolutePath}/delombok/main"
+
     FileCollection aspectpath = configurations.findByName("aspectpath")
     FileCollection ajInpath = configurations.findByName("ajInpath")
+
+    mkdir(srcDir)
+
     def xlint = 'ignore'
     def iajcArgs = [
                     classpath           : sourceSet.compileClasspath.asPath,
-                    destDir      		  : sourceSet.java.outputDir,
+                    destDir      		: sourceSet.java.outputDir,
                     s                   : sourceSet.java.outputDir,
                     source              : project.convention.plugins.java.sourceCompatibility,
                     target              : project.convention.plugins.java.targetCompatibility,
-                    inpath       	      : sourceSet.java.outputDir,
+                    inpath       	    : srcDir,
                     xlint               : xlint,
                     fork                : 'false',
                     aspectPath          : aspectpath.asPath,
@@ -62,8 +68,28 @@ task Ajc{
     ant.taskdef(resource: "org/aspectj/tools/ant/taskdefs/aspectjTaskdefs.properties", classpath: project.configurations.ajtools.asPath)
     ant.iajc(iajcArgs) {
         sourceRoots {
-            pathelement(location: sourceSet.java.srcDirs[1].absolutePath)
+            pathelement(location: srcDir)
         }
     }
-  //  println("${sourceSet.java.outputDir}")
 }
+
+Ajc.setDependsOn(compileJava.dependsOn)
+//Ajc.dependsOn(Ajc.aspectpath)
+//Ajc.dependsOn(Ajc.ajInpath)
+compileJava.getActions().clear()
+compileJava.dependsOn(Ajc)
+
+
+task print{
+    println("${sourceSets.main.java.outputDir}")
+//    println("${sourceSets.main.runtimeClasspath.asPath}")
+//    print(project.buildDir)
+}
+
+task runApp(type: JavaExec, dependsOn: Ajc){
+    classpath = sourceSets.main.runtimeClasspath
+    main = mainClassName
+    standardInput = System.in
+}
+
+run.standardInput = System.in
