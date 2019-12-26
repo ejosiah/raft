@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-@Slf4j
 public class Follower extends NodeState {
 
     protected Follower(){}
@@ -62,7 +61,6 @@ public class Follower extends NodeState {
             node.trigger(new CommitEvent(nextCommitIndex, node.channel));
         }else{
             AppendEntriesReply reply = new AppendEntriesReply(node.currentTerm, node.log.size(), true);
-            log.info("node peer {}, event peer {}, reply {}", node.sender(), event.sender(), reply);
             node.sender().writeAndFlush(reply);
         }
     }

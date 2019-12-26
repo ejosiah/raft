@@ -130,6 +130,10 @@ public class Node extends ChannelDuplexHandler {
         .bind().sync(); // TODO change to future
     }
 
+    public String name(){
+        return String.format("%s:%s", id.getHostName(), id.getPort());
+    }
+
     public boolean alreadyVoted(){
         return votedFor != null;
     }

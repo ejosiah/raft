@@ -32,7 +32,6 @@ public class ResponseMatcher extends ChannelDuplexHandler {
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         if(msg instanceof PromiseRequest){
             PromiseRequest req = (PromiseRequest)msg;
-
             pending.put(req.getId(), req.getPromise());
 
             ctx.channel().eventLoop().schedule(() -> {

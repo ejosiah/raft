@@ -9,7 +9,8 @@ import java.net.InetSocketAddress;
 @With
 @AllArgsConstructor
 @NoArgsConstructor
-public class RequestVote {
+@EqualsAndHashCode(callSuper = false)
+public class RequestVote extends RpcMessage {
     long term;
     long lastLogIndex;
     long lastLogTerm;

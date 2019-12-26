@@ -54,19 +54,25 @@ public class EntryGenerator implements Runnable {
 
             try {
                 while(!endSim(startTime)){
-                    IntStream.range(0, RNG.nextInt(10)).forEach(i -> {
+                    IntStream.range(0, RNG.nextInt(10) + 1).forEach(i -> {
                         commands.add(nextCommand());
                     });
-
-                    log.info("sending {} to {}", commands, client.channel().remoteAddress());
-                    for (Command command : commands) {
-                        client.send(command).get();
+                    if(nodeKiller.getLock().tryLock()) {
+                        try {
+                            log.info("sending {} to {}", commands, client.channel().remoteAddress());
+                            for (Command command : commands) {
+                                client.send(command).get();
+                            }
+                            nodeKiller.allClear();
+                        } finally {
+                            nodeKiller.getLock().unlock();
+                        }
                     }
-                  //  nodeKiller.allClear();
                     TimeUnit.SECONDS.sleep(RNG.nextInt(10));
                 }
             } catch (Exception e) {
-                log.warn("send error {}", e.getMessage());
+                TimeUnit.SECONDS.sleep(RNG.nextInt(10));
+                log.warn("send error", e);
             }
         }catch (Exception ex){
             log.error(ex.getMessage(), ex);

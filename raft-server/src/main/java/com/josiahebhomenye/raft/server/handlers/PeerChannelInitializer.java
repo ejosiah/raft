@@ -16,6 +16,7 @@ public class PeerChannelInitializer extends ProtocolInitializer<Channel> {
         super.initChannel(ch);
         ch.pipeline()
           .addLast(peer.connectionHandler())
-          .addLast(peer.logger());
+          .addLast(peer.logger())
+          .addLast(new Enricher(peer.node()));
     }
 }

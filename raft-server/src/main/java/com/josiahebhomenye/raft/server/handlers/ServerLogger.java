@@ -2,6 +2,8 @@ package com.josiahebhomenye.raft.server.handlers;
 
 import com.josiahebhomenye.raft.comand.Command;
 import com.josiahebhomenye.raft.log.LogEntry;
+import com.josiahebhomenye.raft.rpc.AppendEntriesReply;
+import com.josiahebhomenye.raft.rpc.RequestVoteReply;
 import com.josiahebhomenye.raft.server.core.Interceptor;
 import com.josiahebhomenye.raft.server.core.Node;
 import com.josiahebhomenye.raft.server.event.*;
@@ -12,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
 @ChannelHandler.Sharable
@@ -47,37 +50,57 @@ public class ServerLogger extends Interceptor {
         ctx.fireExceptionCaught(cause);
     }
 
-    public void log(Node node, StateTransitionEvent event){
-        if(event.newState().isFollower()){
-            log.info("Node[{}] is now a follower", node.id());
-        }else if(event.newState().isCandidate()){
-            log.info("Node[{}] is now a candidate and in contention to be leader", node.id());
-        }else if(event.newState().isLeader()){
-            log.info("Node[{}] is now leader for term {}", node.id(), node.currentTerm());
+    public void log(Node node, RequestVoteReplyEvent event){
+        if(event.voteGranted()){
+            InetSocketAddress sender = event.reply().getSenderId();
+            log.info("Node[{}] received votes from peer[{}:{}]", node.name(), sender.getHostName(), sender.getPort());
         }
     }
 
+    public void log(Node node, StateTransitionEvent event){
+        if(event.newState().isFollower()){
+            log.info("Node[{}] is now a follower for term {}", node.name(), node.currentTerm());
+        }else if(event.newState().isCandidate()){
+            log.info("Node[{}] is now a candidate and in contention to be leader for term {}", node.name(), node.currentTerm());
+        }else if(event.newState().isLeader()){
+            log.info("Node[{}] is now leader for term {}", node.name(), node.currentTerm());
+        }
+    }
+
+    public void log(Node node, SendRequestVoteEvent event){
+        log.info("Node[{}] is requesting votes for term {}", node.name(), event.requestVote().getTerm());
+    }
+
+    public void log(Node node, RequestVoteEvent event){
+        InetSocketAddress sender = event.requestVote.getSenderId();
+        log.info("Node[{}] received a vote request from candidate[{}:{}]", node.name(), sender.getHostName(), sender.getPort());
+    }
+
     public void log(Node node, PeerConnectedEvent event){
-        log.info("Node[{}] connected to Peer[{}]", node.id(), event.getSource().remoteAddress());
+        log.info("Node[{}] connected to Peer[{}]", node.name(), event.peer().name());
     }
 
     public void log(Node node, PeerDisconnectedEvent event){
-        log.info("Node[{}] disconnected from Peer[{}]", node.id(), event.getSource().remoteAddress());
+        log.info("Node[{}] disconnected from Peer[{}]", node.name(), event.peer().name());
     }
 
     public void log(Node node, ConnectPeerEvent event){
-        log.info("Node[{}] connecting to Peer[{}]", node.id(), event.getSource().remoteAddress());
+        log.info("Node[{}] connecting to Peer[{}]", node.name(), event.peer().name());
     }
 
     public void log(Node node, AppendEntriesEvent event){
         event.msg().getEntries().forEach(entry -> {
             LogEntry logEntry = LogEntry.deserialize(entry);
             if(Command.type(logEntry.getCommand()) != 0){
-                log.debug("appending log entry {} from {}", logEntry, event.source);
+                log.debug("appending log entry {} from leader[{}]", logEntry, event.source);
             }else{
-                log.warn("received ill formatted log entry {} from {}", logEntry, event.source);
+                log.warn("received ill formatted log entry {} from leader[{}]", logEntry, event.source);
             }
         });
+    }
+
+    public void log(Node node, CommitEvent event){
+        log.debug("Node[{}]'s log is now committed at log index {}", node.name(), event.index());
     }
 
     @Override

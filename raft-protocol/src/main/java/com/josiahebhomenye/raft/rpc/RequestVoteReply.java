@@ -6,7 +6,8 @@ import lombok.*;
 @With
 @AllArgsConstructor
 @NoArgsConstructor
-public class RequestVoteReply {
+@EqualsAndHashCode(callSuper = false)
+public class RequestVoteReply extends RpcMessage {
     long term;
     boolean voteGranted;
 }

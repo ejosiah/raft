@@ -7,6 +7,7 @@ import com.josiahebhomenye.raft.server.util.CheckedExceptionWrapper;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
@@ -27,6 +28,8 @@ public class NodeKiller extends ChannelInboundHandlerAdapter implements Runnable
     private static final Random RNG = new Random();
     final List<Node> nodes;
     final CountDownLatch latch;
+
+    @Getter
     private Lock lock;
     private Condition commitCondition;
     private Condition killGuard;
@@ -56,7 +59,7 @@ public class NodeKiller extends ChannelInboundHandlerAdapter implements Runnable
                     maybeLeader.ifPresent(node -> {
                         if(node.commitIndex() > 0) {
                             log.info("waiting for any pending messages to be sent to leader");
-                           // uncheckVoid(() -> killGuard.await() );
+                            uncheckVoid(() -> killGuard.await() );
                             log.info("taking {} offline", node);
                             uncheck(() -> node.stop().get());
                             uncheckVoid(() -> TimeUnit.SECONDS.sleep(10));

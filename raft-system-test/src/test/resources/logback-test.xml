@@ -8,9 +8,9 @@
         </encoder>
     </appender>
 
-    <logger name="com.josiahebhomenye.raft.server" level="DEBUG"/>
-    <logger name="com.josiahebhomenye.raft.log" level="DEBUG"/>
-    <logger name="com.josiahebhomenye.raft.client.NodeKiller" level="DEBUG"/>
+    <logger name="com.josiahebhomenye.raft.server" level="INFO"/>
+    <logger name="com.josiahebhomenye.raft.log" level="INFO"/>
+    <logger name="com.josiahebhomenye.raft.client.NodeKiller" level="INFO"/>
     <logger name="com.josiahebhomenye.raft.client" level="INFO"/>
 
     <root level="INFO">

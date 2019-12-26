@@ -2,10 +2,8 @@ package com.josiahebhomenye.raft.rpc;
 
 import com.josiahebhomenye.raft.client.Request;
 import com.josiahebhomenye.raft.comand.Command;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.With;
+import lombok.*;
+import lombok.experimental.Accessors;
 
 import java.net.InetSocketAddress;
 
@@ -13,7 +11,9 @@ import java.net.InetSocketAddress;
 @With
 @AllArgsConstructor
 @NoArgsConstructor
-public class Redirect {
+@Accessors(chain = true)
+@EqualsAndHashCode(callSuper = false)
+public class Redirect extends RpcMessage {
     private InetSocketAddress leaderId;
     private Request request;
 }

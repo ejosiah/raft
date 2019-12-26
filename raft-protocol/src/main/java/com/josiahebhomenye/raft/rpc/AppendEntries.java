@@ -9,11 +9,12 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.IntStream;
 
-@Data
 @With
+@Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class AppendEntries {
+public class AppendEntries extends RpcMessage {
     private long term;
     private long prevLogIndex;
     private long prevLogTerm;

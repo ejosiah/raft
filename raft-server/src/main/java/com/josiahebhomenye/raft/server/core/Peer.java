@@ -2,6 +2,7 @@ package com.josiahebhomenye.raft.server.core;
 
 import com.josiahebhomenye.raft.rpc.AppendEntriesReply;
 import com.josiahebhomenye.raft.rpc.RequestVoteReply;
+import com.josiahebhomenye.raft.rpc.RpcMessage;
 import com.josiahebhomenye.raft.server.event.*;
 import com.josiahebhomenye.raft.server.handlers.PeerChannelInitializer;
 import com.josiahebhomenye.raft.server.handlers.PeerLogger;
@@ -147,6 +148,12 @@ public class Peer implements Cloneable  {
                         .withChannel(channel)
                         .withStopping(stopping);
     }
+
+
+    public String name(){
+        return String.format("%s:%s", id.getHostName(), id.getPort());
+    }
+
 
     @Override
     public String toString() {

@@ -16,6 +16,7 @@ public class ServerClientChannelInitializer extends ProtocolInitializer<NioSocke
         super.initChannel(ch);
         ch.pipeline()
           .addLast(node.new ChildHandler())
-          .addLast(new ServerClientLogger());
+          .addLast(new ServerClientLogger())
+          .addLast(new Enricher(node));
     }
 }

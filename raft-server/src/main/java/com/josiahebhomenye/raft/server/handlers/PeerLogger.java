@@ -1,10 +1,11 @@
 package com.josiahebhomenye.raft.server.handlers;
 
+import com.josiahebhomenye.raft.rpc.AppendEntriesReply;
+import com.josiahebhomenye.raft.rpc.RequestVoteReply;
+import com.josiahebhomenye.raft.server.core.Node;
 import com.josiahebhomenye.raft.server.core.Peer;
-import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
+import com.josiahebhomenye.raft.server.util.Dynamic;
+import io.netty.channel.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
@@ -23,13 +24,11 @@ public class PeerLogger extends ChannelDuplexHandler {
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
         promise.addListener(f -> {
-            if(f.isSuccess()) {
-                log.info("server connected to peer {}", remoteAddress);
-            }else{
+            if(!f.isSuccess()) {
                 retires++;
                 if(retires%50 == 0) {
-                    log.info("server unable to connected to peer {}", remoteAddress);
-                    log.info("will try to connect to peer {} again, retry count is {}", remoteAddress, retires);
+                    log.debug("server unable to connected to peer {}", remoteAddress);
+                    log.debug("will try to connect to peer {} again, retry count is {}", remoteAddress, retires);
                 }
             }
         });
@@ -38,18 +37,36 @@ public class PeerLogger extends ChannelDuplexHandler {
 
     @Override
     public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
-        log.info("disconnect from {} is currently in progress", ctx.channel().remoteAddress());
+        log.debug("disconnect from {} is currently in progress", ctx.channel().remoteAddress());
         promise.addListener( f -> {
             if(f.isSuccess()){
-                log.info("disconnected from {}", ctx.channel().remoteAddress());
+                log.debug("disconnected from {}", ctx.channel().remoteAddress());
             }
         });
         ctx.disconnect(promise);
     }
 
     @Override
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        Dynamic.invoke(this, "log", msg);
+        super.write(ctx, msg, promise);
+    }
+
+    @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         log.error(String.format("error [%s] caught on %s", cause.getMessage(), peer), cause);
         ctx.fireExceptionCaught(cause);
+    }
+
+    public void log(RequestVoteReply reply){
+        if(reply.isVoteGranted()){
+            log.info("Node[{}] granting vote to candidate[{}]", peer.node().name(), peer.name());
+        }
+    }
+
+    public void log(AppendEntriesReply reply){
+        if(!reply.isSuccess()){
+            log.debug("Node[{}]'s log not consistent with leader[{}]'s log", peer.node().name(), peer.name());
+        }
     }
 }

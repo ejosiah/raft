@@ -41,6 +41,7 @@ public class SystemTest implements CheckedExceptionWrapper, StateDataSupport {
     List<Guarantee> guarantees = new ArrayList<>();
     ScheduledExecutorService executor = Executors.newScheduledThreadPool(8);
     NodeKiller nodeKiller;
+    FailOnExceptionHandler failOnExceptionHandler;
 
     @Before
     public void setup(){
@@ -49,6 +50,7 @@ public class SystemTest implements CheckedExceptionWrapper, StateDataSupport {
         config = new ServerConfig(ConfigFactory.load());
         testLatch = new CountDownLatch(1);
 
+        failOnExceptionHandler = new FailOnExceptionHandler(nodes, testLatch);
         guarantees.add(new ElectionSafetyGuarantee(nodes, testLatch).setup());
         guarantees.add(new LeaderAppendOnlyGuarantee(nodes, testLatch).setup());
         guarantees.add(new LogMatchingGuarantee(nodes, testLatch).setup());
@@ -69,6 +71,7 @@ public class SystemTest implements CheckedExceptionWrapper, StateDataSupport {
             delete(serverConfig.statePath);
             Node node = new Node(serverConfig);
             node.addPostProcessInterceptors(new ArrayList<>(guarantees));
+            node.addPostProcessInterceptors(failOnExceptionHandler);
             nodes.add(node);
         });
 
@@ -134,6 +137,11 @@ public class SystemTest implements CheckedExceptionWrapper, StateDataSupport {
 
         long timeout = RUNTIME.toMillis() + (long)(RUNTIME.toMillis() * 0.25);
         testLatch.await(timeout, TimeUnit.MILLISECONDS);
+
+        if(failOnExceptionHandler.cause() != null){
+            log.error("test failed due to exception", failOnExceptionHandler.cause());
+            fail(String.format("test failed due to exception: %s", failOnExceptionHandler.cause().getMessage()));
+        }
 
         guarantees.forEach(guarantee -> {
             String name = guarantee.getClass().getSimpleName();
