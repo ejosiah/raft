@@ -23,7 +23,7 @@ public class NodeWaitLatch extends Interceptor {
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        if(trigger.test(node, evt)){
+        if(trigger.test(node(ctx), evt)){
             testWaitLatch.countDown();
             nodeWaitLatch.await();
         }
@@ -33,7 +33,7 @@ public class NodeWaitLatch extends Interceptor {
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         promise.addListener(f -> {
-           if(trigger.test(node, msg)){
+           if(trigger.test(node(ctx), msg)){
                testWaitLatch.countDown();
                nodeWaitLatch.await();
            }

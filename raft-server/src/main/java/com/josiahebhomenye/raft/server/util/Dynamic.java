@@ -7,12 +7,21 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
+import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
 @Slf4j
 public class Dynamic {
+
+    private static final List<String> dontLogList = new ArrayList<>();
+
+    static {
+        dontLogList.add("log");
+    }
 
     private static class Void{
         public static Void instance = new Void();
@@ -24,7 +33,7 @@ public class Dynamic {
         try {
 
             Optional<Method> method = getMethod(target, methodName, args);
-            log.debug("invoking {}.{}({})", target, methodName, Arrays.toString(args));
+            filter(methodName, () -> log.debug("invoking {}.{}({})", target, methodName, Arrays.toString(args)));
             return  method.map(m -> invoke(m, target, args));
         }catch (Exception ex){
             log.warn("exception [{}] encountered trying to invoke {}.{}({}}", ex.getCause(), target, methodName, Arrays.toString(args));
@@ -58,10 +67,16 @@ public class Dynamic {
                 }).findFirst();
 
             if(!res.isPresent()){
-                log.debug("method {}({}) not found on target {}", methodName, Arrays.toString(args), target);
+                filter(methodName, () -> log.debug("method {}({}) not found on target {}", methodName, Arrays.toString(args), target));
             }
 
             return  res;
+        }
+    }
+
+    private static void filter(String methodName, Runnable logStatement){
+        if(!dontLogList.contains(methodName)){
+            logStatement.run();
         }
     }
 
@@ -78,5 +93,11 @@ public class Dynamic {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         return (T)field.get(target);
+    }
+
+
+
+    public void dontLog(String... methodNames){
+        dontLogList.addAll(Arrays.asList(methodNames));
     }
 }

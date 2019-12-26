@@ -319,7 +319,6 @@ public class Node extends ChannelDuplexHandler {
     }
 
     public void addPreProcessInterceptors(List<? extends ChannelDuplexHandler> interceptors){
-        interceptors.stream().filter(i -> i instanceof Interceptor).map(i -> (Interceptor)i).forEach(i -> i.node(this));
         preProcessInterceptors.addAll(interceptors);
     }
 
@@ -328,7 +327,6 @@ public class Node extends ChannelDuplexHandler {
     }
 
     public void addPostProcessInterceptors(List<? extends ChannelDuplexHandler> interceptors){
-        interceptors.stream().filter(i -> i instanceof Interceptor).map(i -> (Interceptor)i).forEach(i -> i.node(this));
         postProcessInterceptors.addAll(interceptors);
     }
 

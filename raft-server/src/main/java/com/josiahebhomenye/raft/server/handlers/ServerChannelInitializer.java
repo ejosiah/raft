@@ -23,7 +23,7 @@ public class ServerChannelInitializer extends ProtocolInitializer<NioServerSocke
             .addLast(Node.HANDLER_KEY, node)
             .addLast("state-manager", node.stateManager())
             .addLast(node.backgroundGroup(), "state-persistor", node.statePersistor())
-            .addLast("logger", new ServerLogger(node));
+            .addLast("logger", new ServerLogger());
         node.postProcessInterceptors().forEach(pipeline::addLast);
     }
 }
