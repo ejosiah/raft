@@ -15,7 +15,7 @@ public class ForceLeader extends Interceptor {
         Node node = node(ctx);
         if(evt.equals(StateTransitionEvent.initialStateTransition())){
             log.info("forcing leader state on {}", node);
-            node.state().transitionTo(NodeState.LEADER());
+            node.state().transitionTo(NodeState.LEADER);
             ctx.pipeline().remove(this);
             log.info("removed ForceLeader interceptor from pipeline");
         }else{

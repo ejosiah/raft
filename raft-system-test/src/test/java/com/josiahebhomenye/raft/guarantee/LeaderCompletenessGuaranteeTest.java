@@ -31,21 +31,21 @@ public class LeaderCompletenessGuaranteeTest extends GuaranteeTest implements Lo
     @Test
     public void newly_elected_leaders_should_contain_all_logs_committed_from_previous_terms(){
         Node candidate = nodes.getLast();
-        candidate.trigger(new StateTransitionEvent(FOLLOWER().set(candidate), CANDIDATE(), null));
-        candidate.trigger(new StateTransitionEvent(CANDIDATE().set(candidate), FOLLOWER(), null));
+        candidate.trigger(new StateTransitionEvent(FOLLOWER.set(candidate), CANDIDATE, null));
+        candidate.trigger(new StateTransitionEvent(CANDIDATE.set(candidate), FOLLOWER, null));
 
         leader = nodes.getFirst();
         leaderEntries().forEach(entry -> leader.log().add(entry));
         leader.trigger(new CommitEvent(3, null));
-        leader.trigger(new StateTransitionEvent(FOLLOWER().set(leader), CANDIDATE(), null));
-        leader.trigger(new StateTransitionEvent(CANDIDATE().set(leader), LEADER(), null));
-        leader.trigger(new StateTransitionEvent(LEADER().set(leader), FOLLOWER(), null));
+        leader.trigger(new StateTransitionEvent(FOLLOWER.set(leader), CANDIDATE, null));
+        leader.trigger(new StateTransitionEvent(CANDIDATE.set(leader), LEADER, null));
+        leader.trigger(new StateTransitionEvent(LEADER.set(leader), FOLLOWER, null));
 
         leader = candidate;
         leaderEntries().forEach(entry -> leader.log().add(entry));
         leader.trigger(new CommitEvent(leaderEntries().size(), null));
-        leader.trigger(new StateTransitionEvent(FOLLOWER().set(leader), CANDIDATE(), null));
-        leader.trigger(new StateTransitionEvent(CANDIDATE().set(leader), LEADER(), null));
+        leader.trigger(new StateTransitionEvent(FOLLOWER.set(leader), CANDIDATE, null));
+        leader.trigger(new StateTransitionEvent(CANDIDATE.set(leader), LEADER, null));
 
         assertTrue(guarantee.passed());
 
@@ -54,21 +54,21 @@ public class LeaderCompletenessGuaranteeTest extends GuaranteeTest implements Lo
     @Test
     public void fail_if_newly_elected_leader_does_not_contain_all_committed_logs_from_previous_terms(){
         Node candidate = nodes.getLast();
-        candidate.trigger(new StateTransitionEvent(FOLLOWER().set(candidate), CANDIDATE(), null));
-        candidate.trigger(new StateTransitionEvent(CANDIDATE().set(candidate), FOLLOWER(), null));
+        candidate.trigger(new StateTransitionEvent(FOLLOWER.set(candidate), CANDIDATE, null));
+        candidate.trigger(new StateTransitionEvent(CANDIDATE.set(candidate), FOLLOWER, null));
 
         leader = nodes.getFirst();
         followerWithMissingAndExtraUnCommittedEntries0().forEach(entry -> leader.log().add(entry));
         leader.trigger(new CommitEvent(7, null));
-        leader.trigger(new StateTransitionEvent(FOLLOWER().set(leader), CANDIDATE(), null));
-        leader.trigger(new StateTransitionEvent(CANDIDATE().set(leader), LEADER(), null));
-        leader.trigger(new StateTransitionEvent(LEADER().set(leader), FOLLOWER(), null));
+        leader.trigger(new StateTransitionEvent(FOLLOWER.set(leader), CANDIDATE, null));
+        leader.trigger(new StateTransitionEvent(CANDIDATE.set(leader), LEADER, null));
+        leader.trigger(new StateTransitionEvent(LEADER.set(leader), FOLLOWER, null));
 
         leader = candidate;
         leaderEntries().forEach(entry -> leader.log().add(entry));
         leader.trigger(new CommitEvent(leaderEntries().size(), null));
-        leader.trigger(new StateTransitionEvent(FOLLOWER().set(leader), CANDIDATE(), null));
-        leader.trigger(new StateTransitionEvent(CANDIDATE().set(leader), LEADER(), null));
+        leader.trigger(new StateTransitionEvent(FOLLOWER.set(leader), CANDIDATE, null));
+        leader.trigger(new StateTransitionEvent(CANDIDATE.set(leader), LEADER, null));
 
         assertFalse(guarantee.passed());
     }

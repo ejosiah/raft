@@ -60,7 +60,7 @@ public class NodeTest implements StateDataSupport, LogDomainSupport {
     public void ensureInitialStateOnFirstBoot(){
         assertEquals(0, node.currentTerm());
         assertNull(node.votedFor());
-        assertEquals(NodeState.NULL_STATE(), node.state());
+        assertEquals(NodeState.NULL_STATE, node.state());
         assertTrue(node.log().isEmpty());
     }
 
@@ -73,7 +73,7 @@ public class NodeTest implements StateDataSupport, LogDomainSupport {
         initializeNode();
 
         assertEquals(1, node.currentTerm());
-        assertEquals(NodeState.NULL_STATE(), node.state());
+        assertEquals(NodeState.NULL_STATE, node.state());
         assertEquals(new InetSocketAddress(8080), node.votedFor());
         assertFalse(node.log().isEmpty());
         assertEquals(new LogEntry(1, new Set(5).serialize()), node.log().get(1));
@@ -113,7 +113,7 @@ public class NodeTest implements StateDataSupport, LogDomainSupport {
         writeLog(leaderEntries(), "log.dat");
         node.stop().get();
         initializeNode();
-        node.state.transitionTo(NodeState.LEADER());
+        node.state.transitionTo(NodeState.LEADER);
 
         LogEntry newEntry = new LogEntry(node.currentTerm, new Add(5).serialize());
         ReceivedRequestEvent event = new ReceivedRequestEvent(new Request(newEntry.getCommand()), channel);

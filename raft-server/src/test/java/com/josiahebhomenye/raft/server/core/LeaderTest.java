@@ -28,7 +28,7 @@ public class LeaderTest extends NodeStateTest implements LogDomainSupport {
 
     @Override
     public NodeState initializeState() {
-        leader =  LEADER();
+        leader =  LEADER;
         leader.set(node);
         return leader;
     }
@@ -220,7 +220,7 @@ public class LeaderTest extends NodeStateTest implements LogDomainSupport {
     public void heartbeat_schedule_is_canceled_when_transition_away_from_leader(){
         leader.init();
 
-        leader.transitionTo(FOLLOWER());
+        leader.transitionTo(FOLLOWER);
 
         Optional<CancelHeartbeatTimeoutEvent> event = userEventCapture.get(CancelHeartbeatTimeoutEvent.class);
 

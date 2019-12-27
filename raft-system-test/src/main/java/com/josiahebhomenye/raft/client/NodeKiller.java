@@ -54,7 +54,7 @@ public class NodeKiller extends ChannelInboundHandlerAdapter implements Runnable
                 commitCondition.await();
 
                 try {
-                    Optional<Node> maybeLeader = nodes.stream().filter(node -> node.state().equals(NodeState.LEADER())).findFirst();
+                    Optional<Node> maybeLeader = nodes.stream().filter(node -> node.state().equals(NodeState.LEADER)).findFirst();
 
                     maybeLeader.ifPresent(node -> {
                         if(node.commitIndex() > 0) {

@@ -24,6 +24,6 @@ public class StateTransitionEvent extends Event {
     }
 
     public static StateTransitionEvent initialStateTransition(){
-        return new StateTransitionEvent(NULL_STATE(), FOLLOWER(), null);
+        return new StateTransitionEvent(NULL_STATE, FOLLOWER, null);
     }
 }

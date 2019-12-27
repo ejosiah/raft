@@ -33,7 +33,7 @@ public class LeaderAppendOnlyGuaranteeTest extends GuaranteeTest implements LogD
     @Test
     public void leader_should_never_override_or_delete_entries(){
         Node leader = nodes.getFirst();
-        leader.trigger(new StateTransitionEvent(NodeState.FOLLOWER().set(leader), NodeState.LEADER(), null));
+        leader.trigger(new StateTransitionEvent(NodeState.FOLLOWER.set(leader), NodeState.LEADER, null));
 
         leaderEntries()
             .stream()
@@ -46,7 +46,7 @@ public class LeaderAppendOnlyGuaranteeTest extends GuaranteeTest implements LogD
     @Test
     public void fail_if_leader_overrides_entries(){
         Node leader = nodes.getFirst();
-        leader.trigger(new StateTransitionEvent(NodeState.FOLLOWER().set(leader), NodeState.LEADER(), null));
+        leader.trigger(new StateTransitionEvent(NodeState.FOLLOWER.set(leader), NodeState.LEADER, null));
 
         leaderEntries()
                 .stream()
@@ -63,7 +63,7 @@ public class LeaderAppendOnlyGuaranteeTest extends GuaranteeTest implements LogD
     @Test
     public void fail_if_leader_deletes_entries() throws Exception{
         Node leader = nodes.getFirst();
-        leader.trigger(new StateTransitionEvent(NodeState.FOLLOWER().set(leader), NodeState.LEADER(), null));
+        leader.trigger(new StateTransitionEvent(NodeState.FOLLOWER.set(leader), NodeState.LEADER, null));
 
         leaderEntries()
                 .stream()
@@ -82,7 +82,7 @@ public class LeaderAppendOnlyGuaranteeTest extends GuaranteeTest implements LogD
     @Test
     public void do_not_run_when_leader_goes_offline() throws Exception{
         Node leader = nodes.getFirst();
-        leader.trigger(new StateTransitionEvent(NodeState.FOLLOWER().set(leader), NodeState.LEADER(), null));
+        leader.trigger(new StateTransitionEvent(NodeState.FOLLOWER.set(leader), NodeState.LEADER, null));
 
         leaderEntries()
                 .stream()
@@ -101,7 +101,7 @@ public class LeaderAppendOnlyGuaranteeTest extends GuaranteeTest implements LogD
     @Test
     public void do_not_process_request_if_its_not_from_current_leader(){
         Node leader = nodes.getFirst();
-        leader.trigger(new StateTransitionEvent(NodeState.FOLLOWER().set(leader), NodeState.LEADER(), null));
+        leader.trigger(new StateTransitionEvent(NodeState.FOLLOWER.set(leader), NodeState.LEADER, null));
 
         leaderEntries()
                 .stream()

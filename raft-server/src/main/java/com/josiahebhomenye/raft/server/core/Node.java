@@ -80,7 +80,7 @@ public class Node extends ChannelDuplexHandler {
     }
 
     void initialize(ServerConfig config){
-        this.state = NULL_STATE();
+        this.state = NULL_STATE;
         this.state.set(this);
         this.config = config;
         this.id = config.id;
@@ -149,7 +149,7 @@ public class Node extends ChannelDuplexHandler {
                 ctx.pipeline().fireUserEventTriggered(new BindEvent(ctx.channel()));
                 peers = config.peers.stream().map(id -> new Peer(id, this, clientGroup)).collect(Collectors.toList());
                 peers.forEach(Peer::connect);
-                state.transitionTo(FOLLOWER());
+                state.transitionTo(FOLLOWER);
             }
         });
         super.bind(ctx, localAddress, promise);
@@ -466,7 +466,7 @@ public class Node extends ChannelDuplexHandler {
             if(prevTerm == currentTerm && votedFor.equals(prevVotedFor)) return false;
             if(evt instanceof StateTransitionEvent){
                 StateTransitionEvent event = (StateTransitionEvent)evt;
-                if(event.newState().equals(CANDIDATE())) return true;
+                if(event.newState().equals(CANDIDATE)) return true;
             }
             if(evt instanceof AppendEntriesEvent) return true;
             if(evt instanceof RequestVoteEvent) return true;

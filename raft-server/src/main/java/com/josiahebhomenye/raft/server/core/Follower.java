@@ -79,7 +79,7 @@ public class Follower extends NodeState {
         if(node.receivedHeartbeatSinceLast(event.lastheartbeat)){
             node.trigger(new ScheduleTimeoutEvent(node.channel, node.nextTimeout()));
         }else{
-            transitionTo(CANDIDATE());
+            transitionTo(CANDIDATE);
         }
     }
 

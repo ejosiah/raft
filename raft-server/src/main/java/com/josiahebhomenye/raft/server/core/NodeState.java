@@ -12,10 +12,10 @@ import java.util.Objects;
 public abstract class NodeState {
 
     // FIXME change to enum
-    public static final Follower FOLLOWER(){ return new Follower(); }
-    public static final Candidate CANDIDATE() {return new Candidate(); }
-    public static final Leader LEADER()  { return new Leader(); };
-    public static final NodeState NULL_STATE() { return new NullState(); };
+    public static final Follower FOLLOWER = new Follower();
+    public static final Candidate CANDIDATE = new Candidate();
+    public static final Leader LEADER = new Leader();
+    public static final NodeState NULL_STATE = new NullState();
 
     public enum Id{FOLLOWER, CANDIDATE, LEADER, NOTHING}
 
@@ -38,7 +38,7 @@ public abstract class NodeState {
 
     public void handle(AppendEntriesEvent event) {
         if(event.msg().getTerm() >= node.currentTerm) { // FIXME probably also need to check log
-            transitionTo(FOLLOWER());
+            transitionTo(FOLLOWER);
             node.trigger(event);
         }else{
             event.sender().writeAndFlush(new AppendEntriesReply(node.currentTerm, 0, false));
@@ -53,7 +53,7 @@ public abstract class NodeState {
     public void handle(RequestVoteEvent event){
         if(event.requestVote().getTerm() > node.currentTerm){
             node.votedFor = null;
-            transitionTo(FOLLOWER());
+            transitionTo(FOLLOWER);
             node.trigger(event);
         }else{
             event.sender().writeAndFlush(new RequestVoteReply(node.currentTerm, false));
