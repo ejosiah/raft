@@ -7,12 +7,9 @@ import com.josiahebhomenye.raft.rpc.RequestVoteReply;
 import com.josiahebhomenye.raft.server.event.*;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.net.InetSocketAddress;
 import java.time.Instant;
-
 import static org.junit.Assert.*;
-import static com.josiahebhomenye.raft.server.core.NodeState.*;
+import static com.josiahebhomenye.raft.server.core.NodeState.Id.*;
 
 public class CandidateTest extends NodeStateTest {
 
@@ -25,7 +22,7 @@ public class CandidateTest extends NodeStateTest {
 
     @Override
     public NodeState initializeState() {
-        candidate = NodeState.CANDIDATE;
+        candidate = Candidate.getInstance();
         candidate.set(node);
         return candidate;
     }
@@ -50,13 +47,13 @@ public class CandidateTest extends NodeStateTest {
         RequestVoteReply reply = new RequestVoteReply(1, true);
 
         candidate.handle(new RequestVoteReplyEvent(reply, peerChannel));
-        assertEquals(CANDIDATE, node.state);
+        assertEquals(CANDIDATE, node.state.id());
 
         candidate.handle(new RequestVoteReplyEvent(reply, peerChannel));
-        assertEquals(LEADER, node.state);
+        assertEquals(LEADER, node.state.id());
 
         StateTransitionEvent event = userEventCapture.get(StateTransitionEvent.class).get();
-        assertEquals(new StateTransitionEvent(CANDIDATE, LEADER, node.channel), event);
+        assertEquals(new StateTransitionEvent(CANDIDATE, LEADER, node), event);
     }
 
     @Test
@@ -70,10 +67,10 @@ public class CandidateTest extends NodeStateTest {
         RequestVoteReply reply = new RequestVoteReply(1, true);
         candidate.handle(new RequestVoteReplyEvent(reply, peerChannel));
 
-        assertEquals(LEADER, node.state);
+        assertEquals(LEADER, node.state.id());
 
         StateTransitionEvent event = userEventCapture.get(0);
-        assertEquals(new StateTransitionEvent(CANDIDATE, LEADER, node.channel), event);
+        assertEquals(new StateTransitionEvent(CANDIDATE, LEADER, node), event);
     }
 
     @Test
@@ -91,7 +88,7 @@ public class CandidateTest extends NodeStateTest {
         candidate.handle(expectedAppendEntriesEvent);
 
         assertEquals(0, userEventCapture.captured());
-        assertEquals(CANDIDATE, node.state);
+        assertEquals(CANDIDATE, node.state.id());
 
         AppendEntriesReply expected = new AppendEntriesReply(2, 0, false);
         AppendEntriesReply actual = nodeChannel.readOutbound();

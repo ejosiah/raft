@@ -31,11 +31,8 @@ import java.net.SocketAddress;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
-import static com.josiahebhomenye.raft.server.core.NodeState.CANDIDATE;
-import static com.josiahebhomenye.raft.server.core.NodeState.FOLLOWER;
+import static com.josiahebhomenye.raft.server.core.NodeState.Id.*;
 import static com.josiahebhomenye.raft.server.core.NodeState.NULL_STATE;
 
 @Getter
@@ -74,14 +71,14 @@ public class Node extends ChannelDuplexHandler {
     boolean stopping;
     Channel sender;
 
+
     @SneakyThrows
     public Node(ServerConfig config){
         initialize(config);
     }
 
     void initialize(ServerConfig config){
-        this.state = NULL_STATE;
-        this.state.set(this);
+        this.state = states.get(NOTHING);
         this.config = config;
         this.id = config.id;
         this.activePeers = new HashMap<>();
@@ -488,6 +485,19 @@ public class Node extends ChannelDuplexHandler {
     @Override
     public int hashCode() {
         return Objects.hash(currentTerm, votedFor, log, id);
+    }
+
+    public NodeState get(NodeState.Id stateId){
+        return states.get(stateId);
+    }
+
+    Map<NodeState.Id, NodeState> states = new HashMap<>();
+
+    {
+        states.put(NOTHING, new NodeState.NullState().set(this));
+        states.put(FOLLOWER, new Follower().set(this));
+        states.put(CANDIDATE, new Candidate().set(this));
+        states.put(LEADER, new Leader().set(this));
     }
 
 }

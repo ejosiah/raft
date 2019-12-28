@@ -16,10 +16,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
+import static com.josiahebhomenye.raft.server.core.NodeState.Id.*;
 import static org.junit.Assert.*;
 import static com.josiahebhomenye.raft.server.core.NodeState.*;
 
+import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -36,6 +37,7 @@ public class LeaderElectionTest implements StateDataSupport {
     CountDownLatch testLatch;
     CountDownLatch nodeLatch;
     Node node;
+    InetSocketAddress senderId = new InetSocketAddress(9004);
 
     ElectionTimeout electionTimeout = new ElectionTimeout(Duration.of(150, ChronoUnit.MILLIS), Duration.of(300, ChronoUnit.MILLIS));
     HeartbeatTimeout heartbeatTimeout = new HeartbeatTimeout(Duration.of(50, ChronoUnit.MILLIS));
@@ -71,7 +73,7 @@ public class LeaderElectionTest implements StateDataSupport {
     public void become_leader_when_majority_vote_received(){
         peers.forEach(peer -> {
             peer.whenRequestVote((ctx, msg) -> {
-                ctx.writeAndFlush(new RequestVoteReply(msg.getTerm(), true));
+                ctx.writeAndFlush(new RequestVoteReply(msg.getTerm(), true).setSenderId(senderId));
             });
         });
 
@@ -86,15 +88,15 @@ public class LeaderElectionTest implements StateDataSupport {
 
         assertEquals(1L, node.currentTerm);
         assertEquals(node.id, node.votedFor);
-        assertEquals(LEADER, node.state);
+        assertEquals(LEADER, node.state.id());
 
-        assertEquals("expected a StateTransitionEvent to be triggered", new StateTransitionEvent(NULL_STATE, FOLLOWER, node.channel), userEventCapture.get(0));
+        assertEquals("expected a StateTransitionEvent to be triggered", new StateTransitionEvent(NOTHING, FOLLOWER, node), userEventCapture.get(0));
         assertTrue("expected a ScheduleTimeoutEvent to be triggered", userEventCapture.get(1) instanceof ScheduleTimeoutEvent);
         assertTrue("expected a ElectionTimeoutEvent to be triggered", userEventCapture.get(2) instanceof ElectionTimeoutEvent);
-        assertEquals("expected a StateTransitionEvent to be triggered", new StateTransitionEvent(FOLLOWER, CANDIDATE, node.channel), userEventCapture.get(3));
+        assertEquals("expected a StateTransitionEvent to be triggered", new StateTransitionEvent(FOLLOWER, CANDIDATE, node), userEventCapture.get(3));
         assertTrue("expected a ScheduleTimeoutEvent to be triggered", userEventCapture.get(4) instanceof ScheduleTimeoutEvent);
         assertEquals("expected a SendRequestVoteEvent to be triggered", new SendRequestVoteEvent(new RequestVote(1L, 0, 0, node.id), node.channel), userEventCapture.get(5));
-        assertEquals("expected a StateTransitionEvent to be triggered", new StateTransitionEvent(CANDIDATE, LEADER, node.channel), userEventCapture.get(6));
+        assertEquals("expected a StateTransitionEvent to be triggered", new StateTransitionEvent(CANDIDATE, LEADER, node), userEventCapture.get(6));
         assertEquals("expected a ScheduleHeartbeatTimeoutEvent to be triggered", new ScheduleHeartbeatTimeoutEvent(node.channel, config.heartbeatTimeout.get()), userEventCapture.get(7));
     }
 
@@ -123,12 +125,12 @@ public class LeaderElectionTest implements StateDataSupport {
 
         assertEquals(2L, node.currentTerm);
         assertEquals(node.id, node.votedFor);
-        assertEquals(LEADER, node.state);
+        assertEquals(LEADER, node.state.id());
 
-        assertEquals(new StateTransitionEvent(NULL_STATE, FOLLOWER, node.channel), userEventCapture.get(0));
+        assertEquals(new StateTransitionEvent(NOTHING, FOLLOWER, node), userEventCapture.get(0));
         assertTrue(userEventCapture.get(1) instanceof ScheduleTimeoutEvent);
         assertTrue(userEventCapture.get(2) instanceof ElectionTimeoutEvent);
-        assertEquals(new StateTransitionEvent(FOLLOWER, CANDIDATE, node.channel), userEventCapture.get(3));
+        assertEquals(new StateTransitionEvent(FOLLOWER, CANDIDATE, node), userEventCapture.get(3));
 
         assertTrue(userEventCapture.get(4) instanceof ScheduleTimeoutEvent);
         assertEquals(new SendRequestVoteEvent(new RequestVote(1L, 0, 0, node.id), node.channel), userEventCapture.get(5));
@@ -139,7 +141,7 @@ public class LeaderElectionTest implements StateDataSupport {
 
         // star new election for term 2
         assertEquals(new SendRequestVoteEvent(new RequestVote(2L, 0, 0, node.id), node.channel), userEventCapture.get(8));
-        assertEquals(new StateTransitionEvent(CANDIDATE, LEADER, node.channel), userEventCapture.get(9));
+        assertEquals(new StateTransitionEvent(CANDIDATE, LEADER, node), userEventCapture.get(9));
         assertEquals(new ScheduleHeartbeatTimeoutEvent(node.channel, config.heartbeatTimeout.get()), userEventCapture.get(10));
     }
 
@@ -149,7 +151,7 @@ public class LeaderElectionTest implements StateDataSupport {
 
         peers.stream().limit(1).forEach(peer -> {
             peer.whenRequestVote((ctx, msg) -> {
-                peer.send(AppendEntries.heartbeat(1, 0, 0, 0, peer.address), 50L);
+                peer.send(AppendEntries.heartbeat(1, 0, 0, 0, peer.address).setSenderId(senderId), 50L);
                 peer.reset();
             });
         });
@@ -158,7 +160,7 @@ public class LeaderElectionTest implements StateDataSupport {
         node.addPreProcessInterceptors(new PreElectionSetup(peers));
         node.addPreProcessInterceptors(userEventCapture);
         node.addPostProcessInterceptors(new NodeWaitLatch(testLatch, nodeLatch, (Node, evt) -> {
-            return evt.equals(new StateTransitionEvent(CANDIDATE, FOLLOWER, node.channel));
+            return evt.equals(new StateTransitionEvent(CANDIDATE, FOLLOWER, node));
         }));
 
         node.start();
@@ -166,15 +168,15 @@ public class LeaderElectionTest implements StateDataSupport {
         testLatch.await(10, TimeUnit.SECONDS);
 
         assertEquals(1L, node.currentTerm);
-        assertEquals(FOLLOWER, node.state);
+        assertEquals(FOLLOWER, node.state.id());
 
-        assertEquals(new StateTransitionEvent(NULL_STATE, FOLLOWER, node.channel), userEventCapture.get(0));
+        assertEquals(new StateTransitionEvent(NOTHING, FOLLOWER, node), userEventCapture.get(0));
         assertTrue(userEventCapture.get(1) instanceof ScheduleTimeoutEvent);
         assertTrue(userEventCapture.get(2) instanceof ElectionTimeoutEvent);
-        assertEquals(new StateTransitionEvent(FOLLOWER, CANDIDATE, node.channel), userEventCapture.get(3));
+        assertEquals(new StateTransitionEvent(FOLLOWER, CANDIDATE, node), userEventCapture.get(3));
         assertTrue(userEventCapture.get(4) instanceof ScheduleTimeoutEvent);
         assertEquals(new SendRequestVoteEvent(new RequestVote(1L, 0, 0, node.id), node.channel), userEventCapture.get(5));
-        assertEquals(new StateTransitionEvent(CANDIDATE, FOLLOWER, node.channel), userEventCapture.get(6));
+        assertEquals(new StateTransitionEvent(CANDIDATE, FOLLOWER, node), userEventCapture.get(6));
     }
 
     @Test
@@ -199,7 +201,7 @@ public class LeaderElectionTest implements StateDataSupport {
         testLatch.await(10, TimeUnit.SECONDS);
 
         assertEquals(1L, node.currentTerm);
-        assertEquals(FOLLOWER, node.state);
+        assertEquals(FOLLOWER, node.state.id());
 
         mockPeer.verifyMessageReceived(expectedMsg);
     }

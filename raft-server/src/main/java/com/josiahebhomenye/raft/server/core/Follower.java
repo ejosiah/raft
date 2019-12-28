@@ -1,19 +1,22 @@
 package com.josiahebhomenye.raft.server.core;
 
-import com.josiahebhomenye.raft.client.Response;
+import com.josiahebhomenye.raft.Environment;
+import com.josiahebhomenye.raft.log.LogEntry;
 import com.josiahebhomenye.raft.rpc.AppendEntriesReply;
 import com.josiahebhomenye.raft.rpc.Redirect;
 import com.josiahebhomenye.raft.rpc.RequestVoteReply;
-import com.josiahebhomenye.raft.log.LogEntry;
 import com.josiahebhomenye.raft.server.event.*;
-import lombok.extern.slf4j.Slf4j;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static com.josiahebhomenye.raft.server.core.NodeState.Id.CANDIDATE;
+
 public class Follower extends NodeState {
+
+    private static final Follower INSTANCE = new Follower();
 
     protected Follower(){}
 
@@ -114,5 +117,9 @@ public class Follower extends NodeState {
     @Override
     public Id id() {
         return Id.FOLLOWER;
+    }
+
+    public static Follower getInstance(){
+        return INSTANCE;
     }
 }

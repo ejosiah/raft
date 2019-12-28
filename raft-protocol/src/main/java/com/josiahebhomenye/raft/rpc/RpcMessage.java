@@ -3,6 +3,7 @@ package com.josiahebhomenye.raft.rpc;
 import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.With;
 import lombok.experimental.Accessors;
 
 import java.net.InetSocketAddress;

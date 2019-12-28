@@ -16,7 +16,7 @@ import lombok.SneakyThrows;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
+import static com.josiahebhomenye.raft.server.core.NodeState.Id.*;
 import java.net.InetSocketAddress;
 import java.time.Instant;
 import java.util.Collections;
@@ -113,7 +113,7 @@ public class NodeTest implements StateDataSupport, LogDomainSupport {
         writeLog(leaderEntries(), "log.dat");
         node.stop().get();
         initializeNode();
-        node.state.transitionTo(NodeState.LEADER);
+        node.state.transitionTo(LEADER);
 
         LogEntry newEntry = new LogEntry(node.currentTerm, new Add(5).serialize());
         ReceivedRequestEvent event = new ReceivedRequestEvent(new Request(newEntry.getCommand()), channel);

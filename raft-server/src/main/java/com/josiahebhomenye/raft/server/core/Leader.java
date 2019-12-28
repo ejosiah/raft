@@ -1,5 +1,6 @@
 package com.josiahebhomenye.raft.server.core;
 
+import com.josiahebhomenye.raft.Environment;
 import com.josiahebhomenye.raft.client.Response;
 import com.josiahebhomenye.raft.rpc.AppendEntries;
 import com.josiahebhomenye.raft.rpc.AppendEntriesReply;
@@ -10,6 +11,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class Leader extends NodeState {
+
+    private static final Leader INSTANCE = new Leader();
 
     @Override
     public void init() {
@@ -26,10 +29,11 @@ public class Leader extends NodeState {
     }
 
     @Override
-    public void transitionTo(NodeState newState) {
+    public void transitionTo(NodeState.Id newStateId) {
+        NodeState newState = get(newStateId);
         if(!this.equals(newState)) {
             node.trigger(new CancelHeartbeatTimeoutEvent());
-            super.transitionTo(newState);
+            super.transitionTo(newState.id());
         }
     }
 
@@ -82,16 +86,6 @@ public class Leader extends NodeState {
         return replicatedOnMajority(replicated);
     }
 
-    private long majorityMatchIndex(long n){
-        Collection<List<Peer>> peersList =  node.activePeers.values().stream().collect(Collectors.groupingBy(peer -> peer.matchIndex)).values();
-        for(List<Peer> peers : peersList){
-            int replicatedHere = node.log.hasEntryAt(peers.get(0).matchIndex) ? 1 : 0;
-            int size = peers.size() + replicatedHere;
-            if(size >= node.config.majority || (float)(size/node.activePeers.size()) >= 0.5) return peers.get(0).matchIndex;
-        }
-        return 0;
-    }
-
     private boolean replicatedOnMajority(int replicated){
         return replicated >= node.config.majority;
     }
@@ -104,5 +98,9 @@ public class Leader extends NodeState {
     @Override
     public Id id() {
         return Id.LEADER;
+    }
+
+    public static Leader getInstance(){
+        return INSTANCE;
     }
 }

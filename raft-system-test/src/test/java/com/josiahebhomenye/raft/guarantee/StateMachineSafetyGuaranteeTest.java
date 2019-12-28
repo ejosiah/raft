@@ -45,7 +45,7 @@ public class StateMachineSafetyGuaranteeTest extends GuaranteeTest implements Lo
 
     @Test
     public void fail_applied_log_entries_one_one_server_does_not_match_applied_log_entries_in_another_server(){
-        nodes.forEach(node -> node.trigger(StateTransitionEvent.initialStateTransition()));
+        nodes.forEach(node -> node.trigger(StateTransitionEvent.initialStateTransition(node)));
 
         long term = leaderEntries().getLast().getTerm();
         long leaderCommit = leaderEntries().size();

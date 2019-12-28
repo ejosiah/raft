@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
+import static com.josiahebhomenye.raft.server.core.NodeState.Id.*;
 
 import static org.junit.Assert.*;
 
@@ -30,7 +31,7 @@ public class FollowerTest extends NodeStateTest implements LogDomainSupport {
 
     @Override
     public NodeState initializeState() {
-        follower = NodeState.FOLLOWER;
+        follower = Follower.getInstance();
         follower.set(node);
         return follower;
     }
@@ -226,7 +227,7 @@ public class FollowerTest extends NodeStateTest implements LogDomainSupport {
         node.lastHeartbeat = lastHeartbeat;
         follower.handle(new ElectionTimeoutEvent(lastHeartbeat, node.channel));
 
-        assertEquals(node.state, NodeState.CANDIDATE);
+        assertEquals(node.state.id(), CANDIDATE);
     }
 
     @Test
@@ -234,7 +235,7 @@ public class FollowerTest extends NodeStateTest implements LogDomainSupport {
         node.lastHeartbeat = null;
         follower.handle(new ElectionTimeoutEvent(null, node.channel));
 
-        assertEquals(node.state, NodeState.CANDIDATE);
+        assertEquals(CANDIDATE, node.state.id());
     }
 
     @Test
@@ -265,7 +266,7 @@ public class FollowerTest extends NodeStateTest implements LogDomainSupport {
 
         RequestVoteReply reply = peerChannel.readOutbound();
         assertEquals(new RequestVoteReply(node.currentTerm, false), reply);
-        assertEquals(node.state, NodeState.FOLLOWER);
+        assertEquals(node.state.id(), FOLLOWER);
     }
 
     @Test
@@ -283,7 +284,7 @@ public class FollowerTest extends NodeStateTest implements LogDomainSupport {
 
         RequestVoteReply reply = peerChannel.readOutbound();
         assertEquals(new RequestVoteReply(node.currentTerm, false), reply);
-        assertEquals(node.state, NodeState.FOLLOWER);
+        assertEquals(node.state.id(), FOLLOWER);
     }
 
     @Test
@@ -305,7 +306,7 @@ public class FollowerTest extends NodeStateTest implements LogDomainSupport {
 
         RequestVoteReply reply = peerChannel.readOutbound();
         assertEquals(new RequestVoteReply(node.currentTerm, false), reply);
-        assertEquals(node.state, NodeState.FOLLOWER);
+        assertEquals(node.state.id(), FOLLOWER);
     }
 
     @Test
@@ -327,7 +328,7 @@ public class FollowerTest extends NodeStateTest implements LogDomainSupport {
 
         RequestVoteReply reply = peerChannel.readOutbound();
         assertEquals(new RequestVoteReply(node.currentTerm, false), reply);
-        assertEquals(node.state, NodeState.FOLLOWER);
+        assertEquals(node.state.id(), FOLLOWER);
     }
 
     @Test
@@ -348,7 +349,7 @@ public class FollowerTest extends NodeStateTest implements LogDomainSupport {
 
         RequestVoteReply reply = peerChannel.readOutbound();
         assertEquals(new RequestVoteReply(node.currentTerm, true), reply);
-        assertEquals(node.state, NodeState.FOLLOWER);
+        assertEquals(node.state.id(), FOLLOWER);
     }
 
     @Test
@@ -375,7 +376,7 @@ public class FollowerTest extends NodeStateTest implements LogDomainSupport {
         assertEquals(new RequestVoteReply(node.currentTerm, false), reply);
 
 
-        assertEquals(node.state, NodeState.FOLLOWER);
+        assertEquals(node.state.id(), FOLLOWER);
 
     }
 

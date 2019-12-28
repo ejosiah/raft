@@ -1,5 +1,6 @@
 package com.josiahebhomenye.raft.server.core;
 
+import com.josiahebhomenye.raft.Environment;
 import com.josiahebhomenye.raft.comand.Set;
 import com.josiahebhomenye.raft.log.Log;
 import com.josiahebhomenye.raft.log.LogEntry;
@@ -12,6 +13,7 @@ import com.josiahebhomenye.raft.server.util.CheckedExceptionWrapper;
 import com.josiahebhomenye.test.support.StateDataSupport;
 import com.typesafe.config.ConfigFactory;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -23,6 +25,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+@Slf4j
 public class LogReplicationTest implements StateDataSupport, CheckedExceptionWrapper {
 
     ServerConfig config = new ServerConfig(ConfigFactory.load());

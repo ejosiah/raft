@@ -31,16 +31,15 @@ public class LeaderCompletenessGuarantee extends Guarantee {
     }
 
     public void check(Node source, StateTransitionEvent event) {
-        if(event.newState().isLeader()){
+        if(source.isLeader()){
             if (prevLeader != null) {
                 try(Log prevLeaderLog = prevLeader.log().clone()) {
-                    Node newLeader = event.oldState().node();
-                    try(Log newLeaderLog = newLeader.log().clone() ) {
+                    try(Log newLeaderLog = source.log().clone() ) {
                         long committed = prevLeader.commitIndex();
                         for(long i = 1; i <= committed; i++){
                             if(!prevLeaderLog.get(i).equals(newLeaderLog.get(i))){
                                 logger.info("guarantee failed previous {} log entry {} not present in current leader {} entry {}",
-                                        prevLeader, prevLeaderLog.get(i), newLeader, newLeaderLog.get(i));
+                                        prevLeader, prevLeaderLog.get(i), source, newLeaderLog.get(i));
                                 fail();
                                 break;
                             }
@@ -48,7 +47,7 @@ public class LeaderCompletenessGuarantee extends Guarantee {
                     }
                 }
             }
-            prevLeader = event.oldState().node();
+            prevLeader = source;
         }
     }
 }

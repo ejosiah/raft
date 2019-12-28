@@ -4,8 +4,10 @@ import com.josiahebhomenye.raft.rpc.AppendEntries;
 import com.josiahebhomenye.raft.rpc.RequestVote;
 import com.josiahebhomenye.raft.server.config.ElectionTimeout;
 import com.josiahebhomenye.raft.server.config.ServerConfig;
-import com.josiahebhomenye.raft.server.event.*;
-
+import com.josiahebhomenye.raft.server.event.AppendEntriesEvent;
+import com.josiahebhomenye.raft.server.event.RequestVoteEvent;
+import com.josiahebhomenye.raft.server.event.ScheduleTimeoutEvent;
+import com.josiahebhomenye.raft.server.event.StateTransitionEvent;
 import com.josiahebhomenye.test.support.StateDataSupport;
 import com.josiahebhomenye.test.support.UserEventCapture;
 import com.typesafe.config.ConfigFactory;
@@ -18,12 +20,11 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
 import java.util.LinkedList;
-import java.util.List;
 
-import static com.josiahebhomenye.raft.server.core.NodeState.*;
-import static org.junit.Assert.*;
+import static com.josiahebhomenye.raft.server.core.NodeState.Id.FOLLOWER;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public abstract class NodeStateTest implements StateDataSupport {
 
@@ -89,7 +90,7 @@ public abstract class NodeStateTest implements StateDataSupport {
 
     @Test
     public void revert_to_follower_if_append_entries_received_from_new_leader(){
-        if(state.equals(FOLLOWER)) return;
+        if(state.isFollower()) return;
         node.currentTerm = 1;
         long leaderTerm = 2;
         long leaderCommit = 3;
@@ -104,14 +105,14 @@ public abstract class NodeStateTest implements StateDataSupport {
         StateTransitionEvent event = userEventCapture.get(StateTransitionEvent.class).get();
         AppendEntriesEvent appendEntriesEvent = userEventCapture.get(AppendEntriesEvent.class).get();
 
-        assertEquals(new StateTransitionEvent(state, FOLLOWER, node.channel), event);
+        assertEquals(new StateTransitionEvent(state.id(), FOLLOWER, node), event);
         assertEquals(expectedAppendEntriesEvent, appendEntriesEvent);
-        assertEquals(FOLLOWER, node.state);
+        assertEquals(FOLLOWER, node.state.id());
     }
 
     @Test
     public void revert_to_follower_if_request_vote_received_with_higher_term(){
-        if(state.equals(FOLLOWER)) return;
+        if(state.isFollower()) return;
         node.currentTerm = 1;
 
         RequestVote requestVote = new RequestVote(2, 2, 2, leaderId);
@@ -122,9 +123,9 @@ public abstract class NodeStateTest implements StateDataSupport {
         StateTransitionEvent event = userEventCapture.get(StateTransitionEvent.class).get();
         RequestVoteEvent actual = userEventCapture.get(RequestVoteEvent.class).get();
 
-        assertEquals(new StateTransitionEvent(state, FOLLOWER, node.channel), event);
+        assertEquals(new StateTransitionEvent(state.id(), FOLLOWER, node), event);
         assertEquals(expected, actual);
-        assertEquals(FOLLOWER, node.state);
+        assertEquals(FOLLOWER, node.state.id());
     }
 
     void assertElectionTimeout(ScheduleTimeoutEvent event){

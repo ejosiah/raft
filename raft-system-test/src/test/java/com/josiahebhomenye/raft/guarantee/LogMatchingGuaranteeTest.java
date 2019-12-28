@@ -26,7 +26,7 @@ public class LogMatchingGuaranteeTest extends GuaranteeTest implements LogDomain
 
     @Test
     public void entries_should_match_on_all_servers(){
-        nodes.forEach(node -> node.trigger(StateTransitionEvent.initialStateTransition()));
+        nodes.forEach(node -> node.trigger(StateTransitionEvent.initialStateTransition(node)));
 
         leaderEntries().forEach(entry -> {
             nodes.getFirst().log().add(entry);
@@ -54,7 +54,7 @@ public class LogMatchingGuaranteeTest extends GuaranteeTest implements LogDomain
 
     @Test
     public void fail_if_entries_with_the_same_index_dont_match(){
-        nodes.forEach(node -> node.trigger(StateTransitionEvent.initialStateTransition()));
+        nodes.forEach(node -> node.trigger(StateTransitionEvent.initialStateTransition(node)));
 
         leaderEntries().forEach(entry -> {
             nodes.getFirst().log().add(entry);

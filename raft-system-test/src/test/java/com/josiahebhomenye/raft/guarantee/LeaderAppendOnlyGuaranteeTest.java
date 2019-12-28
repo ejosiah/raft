@@ -3,10 +3,8 @@ package com.josiahebhomenye.raft.guarantee;
 import com.josiahebhomenye.raft.client.Request;
 import com.josiahebhomenye.raft.comand.Command;
 import com.josiahebhomenye.raft.comand.Divide;
-import com.josiahebhomenye.raft.log.Log;
 import com.josiahebhomenye.raft.log.LogEntry;
 import com.josiahebhomenye.raft.server.core.Node;
-import com.josiahebhomenye.raft.server.core.NodeState;
 import com.josiahebhomenye.raft.server.event.ReceivedRequestEvent;
 import com.josiahebhomenye.raft.server.event.StateTransitionEvent;
 import com.josiahebhomenye.raft.server.util.CheckedExceptionWrapper;
@@ -14,11 +12,14 @@ import com.josiahebhomenye.raft.server.util.Dynamic;
 import com.josiahebhomenye.test.support.LogDomainSupport;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import static org.junit.Assert.*;
+
+import static com.josiahebhomenye.raft.server.core.NodeState.Id.FOLLOWER;
+import static com.josiahebhomenye.raft.server.core.NodeState.Id.LEADER;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class LeaderAppendOnlyGuaranteeTest extends GuaranteeTest implements LogDomainSupport, CheckedExceptionWrapper {
 
@@ -33,7 +34,7 @@ public class LeaderAppendOnlyGuaranteeTest extends GuaranteeTest implements LogD
     @Test
     public void leader_should_never_override_or_delete_entries(){
         Node leader = nodes.getFirst();
-        leader.trigger(new StateTransitionEvent(NodeState.FOLLOWER.set(leader), NodeState.LEADER, null));
+        leader.trigger(new StateTransitionEvent(FOLLOWER, LEADER, leader));
 
         leaderEntries()
             .stream()
@@ -46,7 +47,7 @@ public class LeaderAppendOnlyGuaranteeTest extends GuaranteeTest implements LogD
     @Test
     public void fail_if_leader_overrides_entries(){
         Node leader = nodes.getFirst();
-        leader.trigger(new StateTransitionEvent(NodeState.FOLLOWER.set(leader), NodeState.LEADER, null));
+        leader.trigger(new StateTransitionEvent(FOLLOWER, LEADER, leader));
 
         leaderEntries()
                 .stream()
@@ -63,7 +64,7 @@ public class LeaderAppendOnlyGuaranteeTest extends GuaranteeTest implements LogD
     @Test
     public void fail_if_leader_deletes_entries() throws Exception{
         Node leader = nodes.getFirst();
-        leader.trigger(new StateTransitionEvent(NodeState.FOLLOWER.set(leader), NodeState.LEADER, null));
+        leader.trigger(new StateTransitionEvent(FOLLOWER, LEADER, leader));
 
         leaderEntries()
                 .stream()
@@ -82,7 +83,7 @@ public class LeaderAppendOnlyGuaranteeTest extends GuaranteeTest implements LogD
     @Test
     public void do_not_run_when_leader_goes_offline() throws Exception{
         Node leader = nodes.getFirst();
-        leader.trigger(new StateTransitionEvent(NodeState.FOLLOWER.set(leader), NodeState.LEADER, null));
+        leader.trigger(new StateTransitionEvent(FOLLOWER, LEADER, leader));
 
         leaderEntries()
                 .stream()
@@ -101,7 +102,7 @@ public class LeaderAppendOnlyGuaranteeTest extends GuaranteeTest implements LogD
     @Test
     public void do_not_process_request_if_its_not_from_current_leader(){
         Node leader = nodes.getFirst();
-        leader.trigger(new StateTransitionEvent(NodeState.FOLLOWER.set(leader), NodeState.LEADER, null));
+        leader.trigger(new StateTransitionEvent(FOLLOWER, LEADER, leader));
 
         leaderEntries()
                 .stream()

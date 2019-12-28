@@ -1,9 +1,12 @@
 package com.josiahebhomenye.raft.server.core;
-
+import static com.josiahebhomenye.raft.server.core.NodeState.Id.*;
+import com.josiahebhomenye.raft.Environment;
 import com.josiahebhomenye.raft.rpc.RequestVote;
 import com.josiahebhomenye.raft.server.event.*;
 
 public class Candidate extends NodeState {
+
+    private static final Candidate INSTANCE = new Candidate();
 
     @Override
     public void init() {
@@ -50,5 +53,9 @@ public class Candidate extends NodeState {
     @Override
     public Id id() {
         return Id.CANDIDATE;
+    }
+
+    public static Candidate getInstance(){
+        return INSTANCE;
     }
 }

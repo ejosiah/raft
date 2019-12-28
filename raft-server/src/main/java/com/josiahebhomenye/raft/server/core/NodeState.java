@@ -6,25 +6,22 @@ import com.josiahebhomenye.raft.rpc.RequestVoteReply;
 import com.josiahebhomenye.raft.server.event.*;
 import lombok.Getter;
 import lombok.experimental.Accessors;
-
+import static com.josiahebhomenye.raft.server.core.NodeState.Id.*;
 import java.util.Objects;
 
 public abstract class NodeState {
 
-    // FIXME change to enum
-    public static final Follower FOLLOWER = new Follower();
-    public static final Candidate CANDIDATE = new Candidate();
-    public static final Leader LEADER = new Leader();
-    public static final NodeState NULL_STATE = new NullState();
-
     public enum Id{FOLLOWER, CANDIDATE, LEADER, NOTHING}
+
+    public static final NodeState NULL_STATE = new NullState();
 
     @Getter
     @Accessors(fluent = true)
     protected Node node;
 
-    public void transitionTo(NodeState newState){
-        if(newState != this) {
+    public void transitionTo(NodeState.Id stateId){
+        NodeState newState = this.node.states.get(stateId);
+        if(!newState.equals(this)) {
             newState.set(node); // FIXME remove this, Node handler of state transition will take care of this
             node.trigger(new StateTransitionEvent(this, newState, node.channel));
         }
@@ -106,6 +103,15 @@ public abstract class NodeState {
 
     public boolean isLeader(){
         return false;
+    }
+
+    public static NodeState get(Id id){
+        switch (id){
+            case FOLLOWER: return Follower.getInstance();
+            case CANDIDATE: return Candidate.getInstance();
+            case LEADER : return Leader.getInstance();
+            default: return NULL_STATE;
+        }
     }
 
     @Override

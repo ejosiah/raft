@@ -9,13 +9,11 @@ import com.josiahebhomenye.raft.server.event.*;
 import com.josiahebhomenye.test.support.LogDomainSupport;
 import org.junit.Before;
 import org.junit.Test;
-
+import static com.josiahebhomenye.raft.server.core.NodeState.Id.*;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-
 import static org.junit.Assert.*;
-import static com.josiahebhomenye.raft.server.core.NodeState.*;
 
 public class LeaderTest extends NodeStateTest implements LogDomainSupport {
 
@@ -28,7 +26,7 @@ public class LeaderTest extends NodeStateTest implements LogDomainSupport {
 
     @Override
     public NodeState initializeState() {
-        leader =  LEADER;
+        leader =  Leader.getInstance();
         leader.set(node);
         return leader;
     }

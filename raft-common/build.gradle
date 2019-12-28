@@ -1,0 +1,19 @@
+plugins {
+    id 'java'
+}
+
+version 'unspecified'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile group: 'org.projectlombok', name: 'lombok', version: '1.18.10'
+
+    compile group: 'io.netty', name: 'netty-all', version: '4.1.43.Final'
+
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+}
