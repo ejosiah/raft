@@ -5,7 +5,6 @@ import com.josiahebhomenye.raft.client.Request;
 import com.josiahebhomenye.raft.event.Event;
 import com.josiahebhomenye.raft.event.InboundEvent;
 import com.josiahebhomenye.raft.rpc.AppendEntries;
-import com.josiahebhomenye.raft.rpc.AppendEntriesReply;
 import com.josiahebhomenye.raft.rpc.RequestVote;
 import com.josiahebhomenye.raft.StateManager;
 import com.josiahebhomenye.raft.event.ApplyEntryEvent;
@@ -33,7 +32,6 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import static com.josiahebhomenye.raft.server.core.NodeState.Id.*;
-import static com.josiahebhomenye.raft.server.core.NodeState.NULL_STATE;
 
 @Getter
 @Accessors(fluent = true)
@@ -53,7 +51,7 @@ public class Node extends ChannelDuplexHandler {
     NodeState state;
     EventLoopGroup group;
     EventLoopGroup clientGroup;
-    EventLoopGroup backgroundGroup;
+    EventLoopGroup ioEventGroup;
     ServerConfig config;
     Instant lastHeartbeat;
     InetSocketAddress id;
@@ -86,7 +84,7 @@ public class Node extends ChannelDuplexHandler {
         this.votes = 0;
         this.group = new NioEventLoopGroup(1);   // TODO read from config
         this.clientGroup = new NioEventLoopGroup(3); // TODO read from config
-        this.backgroundGroup = new DefaultEventLoopGroup(1); // TODO read from config
+        this.ioEventGroup = new DefaultEventLoopGroup(2); // TODO read from config
         this.statePersistor = new StatePersistor();
         this.stopPromise = null;
         this.stopping = false;
@@ -463,7 +461,7 @@ public class Node extends ChannelDuplexHandler {
             if(prevTerm == currentTerm && votedFor.equals(prevVotedFor)) return false;
             if(evt instanceof StateTransitionEvent){
                 StateTransitionEvent event = (StateTransitionEvent)evt;
-                if(event.newState().equals(CANDIDATE)) return true;
+                if(event.newState().id().equals(CANDIDATE)) return true;
             }
             if(evt instanceof AppendEntriesEvent) return true;
             if(evt instanceof RequestVoteEvent) return true;
